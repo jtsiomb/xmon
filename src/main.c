@@ -55,6 +55,7 @@ static int win_x, win_y;
 static int win_width, win_height;
 static int frm_width;	/* total with bevels */
 static int bevel;
+static unsigned int all_widgets;
 
 static struct timeval tv0;
 
@@ -84,14 +85,17 @@ int main(int argc, char **argv)
 	bevel = opt.vis.bevel_thick;
 	frm_width = opt.vis.frm_width + bevel;
 
-	if(cpu_init() == -1) {
-		return 1;
+	if((opt.mon & MON_CPU) && cpu_init() == -1) {
+		fprintf(stderr, "disabling CPU usage display\n");
+		opt.mon &= ~MON_CPU;
 	}
-	if(mem_init() == -1) {
-		return 1;
+	if((opt.mon & MON_MEM) && mem_init() == -1) {
+		fprintf(stderr, "disabling memory usage display\n");
+		opt.mon &= ~MON_MEM;
 	}
-	if(load_init() == -1) {
-		return 1;
+	if((opt.mon & MON_LOAD) && load_init() == -1) {
+		fprintf(stderr, "disabling load average display\n");
+		opt.mon &= ~MON_LOAD;
 	}
 
 	if(!(dpy = XOpenDisplay(0))) {
@@ -120,9 +124,14 @@ int main(int argc, char **argv)
 	if(init_widgets() == -1) {
 		return 1;
 	}
-	if(cpumon_init() == -1) {
+	if((opt.mon & MON_CPU) && cpumon_init() == -1) {
 		return 1;
 	}
+
+	/* compute bitmask to redraw all enabled widgets */
+	if(opt.mon & MON_CPU) all_widgets |= UI_CPU;
+	if(opt.mon & MON_MEM) all_widgets |= UI_MEM;
+	if(opt.mon & MON_LOAD) all_widgets |= UI_LOAD;
 
 	XSetWindowBackground(dpy, win, opt.vis.uicolor[COL_BG].pixel);
 
@@ -171,13 +180,18 @@ int main(int argc, char **argv)
 		if(msec - prev_upd >= opt.upd_interv) {
 			prev_upd = msec;
 
-			cpu_update();
-			mem_update();
-			load_update();
+			if(opt.mon & MON_CPU) {
+				cpu_update();
+				cpumon_update();
+			}
+			if(opt.mon & MON_MEM) {
+				mem_update();
+			}
+			if(opt.mon & MON_LOAD) {
+				load_update();
+			}
 
-			cpumon_update();
-
-			draw_window(UI_CPU | UI_MEM | UI_LOAD);
+			draw_window(all_widgets);
 		}
 	}
 
@@ -194,37 +208,43 @@ static void layout(void)
 	y = frm_width;
 
 	/* CPU monitor */
-	cpu_rect.x = frm_width;
-	cpu_rect.y = y;
-	cpu_rect.width = all_width;
-	cpu_rect.height = cpumon_height(all_width);
+	if(opt.mon & MON_CPU) {
+		cpu_rect.x = frm_width;
+		cpu_rect.y = y;
+		cpu_rect.width = all_width;
+		cpu_rect.height = cpumon_height(all_width);
 
-	cpumon_move(cpu_rect.x, cpu_rect.y);
-	cpumon_resize(cpu_rect.width, cpu_rect.height);
+		cpumon_move(cpu_rect.x, cpu_rect.y);
+		cpumon_resize(cpu_rect.width, cpu_rect.height);
 
-	y += cpu_rect.height + frm_width;
+		y += cpu_rect.height + frm_width;
+	}
 
 	/* load average */
-	load_rect.x = frm_width;
-	load_rect.y = y;
-	load_rect.width = all_width;
-	load_rect.height = loadmon_height(all_width);
+	if(opt.mon & MON_LOAD) {
+		load_rect.x = frm_width;
+		load_rect.y = y;
+		load_rect.width = all_width;
+		load_rect.height = loadmon_height(all_width);
 
-	loadmon_move(load_rect.x, load_rect.y);
-	loadmon_resize(load_rect.width, load_rect.height);
+		loadmon_move(load_rect.x, load_rect.y);
+		loadmon_resize(load_rect.width, load_rect.height);
 
-	y += load_rect.height + frm_width;
+		y += load_rect.height + frm_width;
+	}
 
 	/* memory monitor */
-	mem_rect.x = all_x;
-	mem_rect.y = y;
-	mem_rect.width = all_width;
-	mem_rect.height = all_width / 2;
+	if(opt.mon & MON_MEM) {
+		mem_rect.x = all_x;
+		mem_rect.y = y;
+		mem_rect.width = all_width;
+		mem_rect.height = all_width / 2;
 
-	memmon_move(mem_rect.x, mem_rect.y);
-	memmon_resize(mem_rect.width, mem_rect.height);
+		memmon_move(mem_rect.x, mem_rect.y);
+		memmon_resize(mem_rect.width, mem_rect.height);
 
-	y += mem_rect.height + frm_width;
+		y += mem_rect.height + frm_width;
+	}
 
 	minrect.width = win_width;
 	minrect.height = y;
@@ -311,7 +331,7 @@ static void proc_event(XEvent *ev)
 		if(!mapped || ev->xexpose.count > 0) {
 			break;
 		}
-		draw_window(UI_ALL);
+		draw_window(UI_FRAME | all_widgets);
 		break;
 
 	case MapNotify:

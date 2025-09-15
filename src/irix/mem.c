@@ -10,7 +10,6 @@ int mem_init(void)
 	long pagesz;
 
 	pagesz = sysconf(_SC_PAGESIZE);
-	printf("page size: %ld ", pagesz);
 
 	pageshift = 0;
 	while(pagesz > 1) {

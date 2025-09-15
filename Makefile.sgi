@@ -1,10 +1,10 @@
 PREFIX = /usr/local
 
-obj = src/cpumon.o src/main.o src/memmon.o src/options.o src/irix/cpu.o \
-	  src/irix/mem.o
+obj = src/main.o src/cpumon.o src/memmon.o src/loadmon.o src/options.o \
+	src/widget.o src/irix/cpu.o src/irix/mem.o src/irix/load.o
 bin = xmon
 
-CFLAGS = -g3 -Isrc
+CFLAGS = -O2 -g3 -Isrc
 LDFLAGS = -lX11 -lXext
 
 $(bin): $(obj)
@@ -21,6 +21,8 @@ clean:
 install: $(bin)
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	cp $(bin) $(DESTDIR)$(PREFIX)/bin/$(bin)
+	chown root $(DESTDIR)$(PREFIX)/bin/$(bin)
+	chmod 4775 $(DESTDIR)$(PREFIX)/bin/$(bin)
 
 .PHONY: uninstall
 uninstall:

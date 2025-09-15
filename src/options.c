@@ -24,6 +24,8 @@ void init_opt(void)
 	opt.ysz = 200;
 	opt.upd_interv = 250;
 
+	opt.mon = MON_ALL;
+
 	memcpy(opt.vis.uicolor, def_uicolor, sizeof opt.vis.uicolor);
 	opt.vis.font = "-*-helvetica-bold-r-*-*-12-*";
 	opt.vis.frm_width = 4;
@@ -33,23 +35,33 @@ void init_opt(void)
 	opt.cpu.ncolors = 16;
 }
 
-static const char *usage_str = "Usage: %s [options]\n"
-	"Options:\n"
-	" -geometry <width>x<height>+<x>+<y>: specify window geometry\n"
-	" -update <interval>: update interval in milliseconds\n"
-	" -font <font>: specify UI font\n"
-	" -frame <pixels>: UI frame width in pixels (not including bevels)\n"
-	" -decor/-nodecor: enable/disable window decorations (frame, titlebar)\n"
-	" -bevel <pixels>: bevel thickness for the default UI look\n"
-	" -textcolor <r,g,b>: specify the text color\n"
-	" -bgcolor <r,g,b>: specify background color\n"
-	" -h/-help: print usage and exit\n";
+static const char *usage_str[] = {
+	"Usage: %s [options]\n",
+	"Options:\n",
+	" -geometry <width>x<height>+<x>+<y>: specify window geometry\n",
+	" -update <interval>: update interval in milliseconds\n",
+	" -cpu/-nocpu: enable/disable CPU usage display\n",
+	" -load/-noload: enable/disable load average display\n",
+	" -mem/-nomem: enable/disable memory usage display\n",
+	" -font <font>: specify UI font\n",
+	" -frame <pixels>: UI frame width in pixels (not including bevels)\n",
+	" -decor/-nodecor: enable/disable window decorations (frame, titlebar)\n",
+	" -bevel <pixels>: bevel thickness for the default UI look\n",
+	" -textcolor <r,g,b>: specify the text color\n",
+	" -bgcolor <r,g,b>: specify background color\n",
+	" -h/-help: print usage and exit\n",
+	0
+};
 
 int parse_args(int argc, char **argv)
 {
-	int i, x, y;
+	int i, j, x, y;
 	unsigned int width, height, flags;
+	char buf[64];
 	char *endp;
+
+	/* these must match the order of the MON_* enums in options.h */
+	static const char *monsuffix[] = {"cpu", "mem", "load", 0};
 
 	for(i=1; i<argc; i++) {
 		if(argv[i][0] == '-') {
@@ -109,12 +121,31 @@ int parse_args(int argc, char **argv)
 				calc_bevel_colors();
 
 			} else if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0) {
-				printf(usage_str, argv[0]);
+				for(j=0; usage_str[j]; j++) {
+					printf(usage_str[j], argv[0]);
+				}
 				exit(0);
 
 			} else {
-				fprintf(stderr, "unrecognized option: %s\n", argv[i]);
-				return -1;
+				/* handle -cpu/-nocpu, -mem/-nomem ... etc */
+				for(j=0; monsuffix[j]; j++) {
+					sprintf(buf, "-%s", monsuffix[j]);
+					if(strcmp(argv[i], buf) == 0) {
+						opt.mon |= 1 << j;
+						break;
+					}
+					sprintf(buf, "-no%s", monsuffix[j]);
+					if(strcmp(argv[i], buf) == 0) {
+						opt.mon &= ~(1 << j);
+						break;
+					}
+				}
+
+				if(monsuffix[j] == 0) {
+					/* went through all of the suffixes, it's not one of them */
+					fprintf(stderr, "unrecognized option: %s\n", argv[i]);
+					return -1;
+				}
 			}
 
 		} else {
