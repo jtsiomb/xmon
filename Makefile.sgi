@@ -1,7 +1,8 @@
 PREFIX = /usr/local
 
-obj = src/main.o src/cpumon.o src/memmon.o src/loadmon.o src/options.o \
-	src/widget.o src/irix/cpu.o src/irix/mem.o src/irix/load.o
+obj = src/main.o src/options.o src/widget.o \
+	src/cpumon.o src/memmon.o src/loadmon.o src/netmon.o \
+	src/irix/cpu.o src/irix/mem.o src/irix/load.o src/irix/net.o
 bin = xmon
 
 CFLAGS = -O2 -g3 -Isrc

@@ -15,6 +15,7 @@
 static int sock;
 static char **ifnames;
 static int num_ifs;
+static unsigned long prev_rx, prev_tx;
 
 int net_init(void)
 {
@@ -102,15 +103,23 @@ void net_update(void)
 {
 	int i;
 	struct ifreq ifr;
+	unsigned long cur_rx, cur_tx;
+
+	cur_rx = cur_tx = 0;
 
 	for(i=0; i<num_ifs; i++) {
 		strcpy(ifr.ifr_name, ifnames[i]);
 		if(ioctl(sock, SIOCGIFSTATS, &ifr) == -1) {
 			continue;
 		}
-		smon.net_rx += ifr.ifr_stats.ifs_ipackets;
-		smon.net_tx += ifr.ifr_stats.ifs_opackets;
+		cur_rx += ifr.ifr_stats.ifs_ipackets;
+		cur_tx += ifr.ifr_stats.ifs_opackets;
 	}
+
+	smon.net_rx = prev_rx ? cur_rx - prev_rx : 0;
+	smon.net_tx = prev_tx ? cur_tx - prev_tx : 0;
+	prev_rx = cur_rx;
+	prev_tx = cur_tx;
 }
 
 #endif	/* NET_H_ */

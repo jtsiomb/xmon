@@ -58,7 +58,7 @@ void netmon_resize(int x, int y)
 		}
 	}
 	plot_start = plot_end = 0;
-	plot_max = 9600;	/* start the range at 9600 baud for no particular reason */
+	plot_max = 1;
 
 	rect.width = x;
 	rect.height = y;

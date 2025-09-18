@@ -78,3 +78,8 @@ Notes
 On IRIX xmon is installed as setuid-root, to be able to access kernel memory to
 read the load average. Root priviledges are dropped immediately after /dev/kmem
 is opened. See `load_init` in `src/irix/load.c`.
+
+### IRIX network traffic unit is packets
+
+On IRIX xmon can't compute traffic in bytes. Only packet counters are
+available. So all displayed numbers are packets or packets / sec.
