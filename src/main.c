@@ -19,7 +19,7 @@ struct color {
 static Display *dpy;
 static int scr;
 static Window win, root;
-static XVisualInfo vinf;
+static XVisualInfo *vinf;
 static Atom xa_wm_proto, xa_wm_del;
 static Colormap cmap;
 static int quit;
@@ -27,6 +27,7 @@ static GC gc;
 static XColor colors[NUM_COLORS];
 static unsigned char *fb;
 static XImage *ximg;
+static int rshift, gshift, bshift;
 
 static int win_width = 96, win_height = 96;
 
@@ -41,9 +42,10 @@ static int dbg_cmap;
 
 static void fb_update(void);
 static void draw_window(void);
-static int create_window(const char *title, int width, int height, XVisualInfo *vis);
+static int create_window(const char *title, int width, int height);
 static void proc_event(XEvent *ev);
 static int resize_framebuf(int width, int height);
+static int mask_to_shift(unsigned int mask);
 
 int main(int argc, char **argv)
 {
@@ -63,12 +65,7 @@ int main(int argc, char **argv)
 	xa_wm_proto = XInternAtom(dpy, "WM_PROTOCOLS", False);
 	xa_wm_del = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
 
-	if(!XMatchVisualInfo(dpy, scr, 8, PseudoColor, &vinf)) {
-		fprintf(stderr, "failed to find an appropriate visual\n");
-		return 1;
-	}
-
-	if(create_window("xmon", win_width, win_height, &vinf) == -1) {
+	if(create_window("xmon", win_width, win_height) == -1) {
 		return 1;
 	}
 
@@ -123,8 +120,9 @@ int main(int argc, char **argv)
 
 static void fb_update(void)
 {
-	int i, row_offs, cur, next, col0, col1;
+	int i, row_offs, cur, col0;
 	unsigned char *row;
+	unsigned int *row32;
 
 	if(!ximg || ximg->width != win_width || ximg->height != win_height) {
 		if(resize_framebuf(win_width, win_height) == -1) {
@@ -133,22 +131,39 @@ static void fb_update(void)
 		}
 	}
 
-	row_offs = (win_height - 1) * win_width;
+	row_offs = (win_height - 1) * ximg->bytes_per_line;
 
 	/* scroll up */
-	memmove(fb, fb + win_width, row_offs);
+	memmove(fb, fb + ximg->bytes_per_line, row_offs);
 
 	/* draw the bottom line with the current stats */
 	row = fb + row_offs;
-	for(i=0; i<win_width; i++) {
-		cur = i * smon.num_cpus / win_width;
-		/*next = cur + 1;
-		if(next >= smon.num_cpus) next = cur;*/
 
-		col0 = (smon.cpu[cur] * NUM_COLORS) >> 7;
-		/*col1 = (smon.cpu[next] * NUM_COLORS) >> 7;*/
+	switch(ximg->bits_per_pixel) {
+	case 8:
+		for(i=0; i<win_width; i++) {
+			cur = i * smon.num_cpus / win_width;
+			col0 = (smon.cpu[cur] * NUM_COLORS) >> 7;
+			*row++ = colors[col0].pixel;
+		}
+		break;
 
-		*row++ = colors[col0].pixel;
+	case 32:
+		row32 = (unsigned int*)row;
+		for(i=0; i<win_width; i++) {
+			int r, g, b;
+			cur = i * smon.num_cpus / win_width;
+			col0 = (smon.cpu[cur] * NUM_COLORS) >> 7;
+
+			r = colors[col0].red >> 8;
+			g = colors[col0].green >> 8;
+			b = colors[col0].blue >> 8;
+			*row32++ = (r << rshift) | (g << gshift) | (b << bshift);
+		}
+		break;
+
+	default:
+		break;
 	}
 }
 
@@ -168,16 +183,19 @@ static void draw_window(void)
 	XPutImage(dpy, win, gc, ximg, 0, 0, 0, 0, ximg->width, ximg->height);
 }
 
-static int create_window(const char *title, int width, int height, XVisualInfo *vis)
+static int create_window(const char *title, int width, int height)
 {
 	XSetWindowAttributes xattr;
 	XTextProperty txprop;
+	XWindowAttributes winattr;
+	XVisualInfo vtmpl;
+	int num_match;
 
 	xattr.background_pixel = BlackPixel(dpy, scr);
 	xattr.colormap = cmap = DefaultColormap(dpy, scr);
 
-	if(!(win = XCreateWindow(dpy, root, 0, 0, width, height, 0, vis->depth,
-					InputOutput, vis->visual, CWBackPixel | CWColormap, &xattr))) {
+	if(!(win = XCreateWindow(dpy, root, 0, 0, width, height, 0, CopyFromParent,
+					InputOutput, CopyFromParent, CWBackPixel | CWColormap, &xattr))) {
 		fprintf(stderr, "failed to create window\n");
 		return -1;
 	}
@@ -189,8 +207,11 @@ static int create_window(const char *title, int width, int height, XVisualInfo *
 	}
 	XSetWMProtocols(dpy, win, &xa_wm_del, 1);
 
-	XMapWindow(dpy, win);
+	XGetWindowAttributes(dpy, win, &winattr);
+	vtmpl.visualid = winattr.visual->visualid;
+	vinf = XGetVisualInfo(dpy, VisualIDMask, &vtmpl, &num_match);
 
+	XMapWindow(dpy, win);
 	return 0;
 }
 
@@ -251,23 +272,39 @@ static void proc_event(XEvent *ev)
 
 static int resize_framebuf(int width, int height)
 {
+	int pitch;
+
+	if(!ximg) {
+		if(!(ximg = XCreateImage(dpy, vinf->visual, vinf->depth, ZPixmap, 0, 0,
+						width, height, 8, 0))) {
+			return -1;
+		}
+		rshift = mask_to_shift(ximg->red_mask);
+		gshift = mask_to_shift(ximg->green_mask);
+		bshift = mask_to_shift(ximg->blue_mask);
+	}
+
+	printf("resizing framebuffer: %dx%d %d bpp\n", width, height, ximg->bits_per_pixel);
 	free(fb);
 
-	printf("resizing framebuffer: %dx%d\n", width, height);
-
-	if(!(fb = calloc(1, win_width * win_height))) {
+	pitch = width * ximg->bits_per_pixel;
+	if(!(fb = calloc(1, height * pitch))) {
 		return -1;
 	}
 
-	if(!ximg) {
-		if(!(ximg = XCreateImage(dpy, vinf.visual, vinf.depth, ZPixmap, 0, 0,
-						width, height, 8, width))) {
-			return -1;
-		}
-	}
 	ximg->width = width;
 	ximg->height = height;
-	ximg->bytes_per_line = width;
+	ximg->bytes_per_line = pitch;
 	ximg->data = (char*)fb;
+	return 0;
+}
+
+static int mask_to_shift(unsigned int mask)
+{
+	int i;
+	for(i=0; i<32; i++) {
+		if(mask & 1) return i;
+		mask >>= 1;
+	}
 	return 0;
 }
