@@ -55,7 +55,7 @@ int cpumon_init(void)
 		if(!XAllocColor(dpy, cmap, colors + i)) {
 			fprintf(stderr, "failed to allocate color %d\n", i);
 		} else {
-			printf("color %6lx: %3u %3u %3u\n", colors[i].pixel,
+			printf("color %06lx: %3u %3u %3u\n", colors[i].pixel,
 					colors[i].red >> 8, colors[i].green >> 8, colors[i].blue >> 8);
 		}
 	}

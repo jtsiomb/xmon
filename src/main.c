@@ -13,6 +13,15 @@
 #define UPD_RATE_MS	350
 #define FONT_DESC	"-*-helvetica-medium-r-*-*-12-*"
 
+enum {
+	COL_FG,
+	COL_BG,
+	COL_BGHI,
+	COL_BGLO,
+
+	NUM_UICOLORS
+};
+
 static Atom xa_wm_proto, xa_wm_del;
 
 static int win_width = 96, win_height = 96;
@@ -20,10 +29,18 @@ static int frm_width = 8;
 
 static struct timeval tv0;
 
+static XColor uicolor[NUM_UICOLORS] = {
+	{0, 0xffff, 0xffff, 0xffff},
+	{0, 0x6000, 0x6000, 0x6000},
+	{0, 0x8000, 0x8000, 0x8000},
+	{0, 0x4000, 0x4000, 0x4000}
+};
+
 static XRectangle cpumon_rect;
 
 static void layout(void);
 static void draw_window(void);
+static void draw_frame(int x, int y, int w, int h, int depth);
 static int create_window(const char *title, int width, int height);
 static void proc_event(XEvent *ev);
 static long get_msec(void);
@@ -34,6 +51,7 @@ int main(int argc, char **argv)
 	XEvent ev;
 	struct timeval tv;
 	long prev_upd, msec, dt;
+	int i;
 
 	if(sysmon_init() == -1) {
 		return 1;
@@ -63,11 +81,21 @@ int main(int argc, char **argv)
 	}
 	XSetFont(dpy, gc, font->fid);
 
+	for(i=0; i<NUM_UICOLORS; i++) {
+		XAllocColor(dpy, cmap, uicolor + i);
+		printf("ui color %06lx: %3u %3u %3u\n", uicolor[i].pixel,
+				uicolor[i].red >> 8, uicolor[i].green >> 8, uicolor[i].blue >> 8);
+	}
+	XSetWindowBackground(dpy, win, uicolor[COL_BG].pixel);
+
 	if(cpumon_init() == -1) {
 		return 1;
 	}
 
 	layout();
+
+	XMapWindow(dpy, win);
+	XFlush(dpy);
 
 	gettimeofday(&tv0, 0);
 
@@ -135,7 +163,44 @@ static void layout(void)
 
 static void draw_window(void)
 {
+	int bevel = 1;
+
+	draw_frame(0, 0, win_width, win_height, bevel);
+	draw_frame(cpumon_rect.x - bevel, cpumon_rect.y - bevel,
+			cpumon_rect.width + bevel * 2, cpumon_rect.height + bevel * 2,
+			-bevel);
+
 	cpumon_draw();
+
+	XFlush(dpy);
+}
+
+static void draw_frame(int x, int y, int w, int h, int depth)
+{
+	int bevel;
+	XPoint v[3];
+
+	if(depth == 0) return;
+
+	bevel = abs(depth);
+
+	if(bevel == 1) {
+		XSetLineAttributes(dpy, gc, bevel, LineSolid, CapButt, JoinBevel);
+
+		v[0].x = x; v[0].y = y + h - 1;
+		v[1].x = x; v[1].y = y;
+		v[2].x = x + w - 1; v[2].y = y;
+
+		XSetForeground(dpy, gc, uicolor[depth > 0 ? COL_BGHI : COL_BGLO].pixel);
+		XDrawLines(dpy, win, gc, v, 3, CoordModeOrigin);
+
+		v[0].x = x + w - 1; v[0].y = y;
+		v[1].x = x + w - 1; v[1].y = y + h - 1;
+		v[2].x = x; v[2].y = y + h - 1;
+
+		XSetForeground(dpy, gc, uicolor[depth > 0 ? COL_BGLO : COL_BGHI].pixel);
+		XDrawLines(dpy, win, gc, v, 3, CoordModeOrigin);
+	}
 }
 
 static int create_window(const char *title, int width, int height)
@@ -165,8 +230,6 @@ static int create_window(const char *title, int width, int height)
 	XGetWindowAttributes(dpy, win, &winattr);
 	vtmpl.visualid = winattr.visual->visualid;
 	vinf = XGetVisualInfo(dpy, VisualIDMask, &vtmpl, &num_match);
-
-	XMapWindow(dpy, win);
 	return 0;
 }
 
