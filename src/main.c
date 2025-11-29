@@ -1,3 +1,4 @@
+#include <X11/X.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +12,7 @@
 #include "sysmon.h"
 
 #define UPD_RATE_MS	350
-#define FONT_DESC	"-*-helvetica-medium-r-*-*-12-*"
+#define FONT_DESC	"-*-helvetica-bold-r-*-*-12-*"
 
 enum {
 	COL_FG,
@@ -22,18 +23,32 @@ enum {
 	NUM_UICOLORS
 };
 
-static Atom xa_wm_proto, xa_wm_del;
+typedef struct {
+	unsigned long flags;
+	unsigned long functions;
+	unsigned long decorations;
+	long input_mode;
+	unsigned long status;
+} MotifWmHints;
 
-static int win_width = 96, win_height = 96;
+#define MWM_HINTS_DECORATIONS	0x02
+#define MWM_DECOR_BORDER		0x02
+
+static Atom xa_wm_proto, xa_wm_del;
+static Atom xa_mwm_hints;
+
+static int win_x, win_y;
+static int win_width = 100, win_height = 100;
 static int frm_width = 8;
+static int bevel = 2;
 
 static struct timeval tv0;
 
 static XColor uicolor[NUM_UICOLORS] = {
-	{0, 0xffff, 0xffff, 0xffff},
-	{0, 0x6000, 0x6000, 0x6000},
-	{0, 0x8000, 0x8000, 0x8000},
-	{0, 0x4000, 0x4000, 0x4000}
+	{0, 0, 0, 0},
+	{0, 0xb4b4, 0xb4b4, 0xb4b4},
+	{0, 0xdfdf, 0xdfdf, 0xdfdf},
+	{0, 0x6262, 0x6262, 0x6262}
 };
 
 static XRectangle cpumon_rect;
@@ -65,6 +80,7 @@ int main(int argc, char **argv)
 	root = RootWindow(dpy, scr);
 	xa_wm_proto = XInternAtom(dpy, "WM_PROTOCOLS", False);
 	xa_wm_del = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
+	xa_mwm_hints = XInternAtom(dpy, "_MOTIF_WM_HINTS", False);
 
 	if(create_window("xmon", win_width, win_height) == -1) {
 		return 1;
@@ -79,12 +95,13 @@ int main(int argc, char **argv)
 		fprintf(stderr, "failed to load font: %s\n", FONT_DESC);
 		return 1;
 	}
+	font_height = font->ascent + font->descent;
 	XSetFont(dpy, gc, font->fid);
 
 	for(i=0; i<NUM_UICOLORS; i++) {
 		XAllocColor(dpy, cmap, uicolor + i);
-		printf("ui color %06lx: %3u %3u %3u\n", uicolor[i].pixel,
-				uicolor[i].red >> 8, uicolor[i].green >> 8, uicolor[i].blue >> 8);
+		/*printf("ui color %06lx: %3u %3u %3u\n", uicolor[i].pixel,
+				uicolor[i].red >> 8, uicolor[i].green >> 8, uicolor[i].blue >> 8);*/
 	}
 	XSetWindowBackground(dpy, win, uicolor[COL_BG].pixel);
 
@@ -149,12 +166,12 @@ int main(int argc, char **argv)
 static void layout(void)
 {
 	cpumon_rect.x = frm_width;
-	cpumon_rect.y = frm_width;
+	cpumon_rect.y = font_height + bevel * 2 + 4;
+	if(cpumon_rect.y < frm_width) cpumon_rect.y = frm_width;
 	cpumon_rect.width = win_width - frm_width * 2;
-	if(win_height >= win_width) {
+	cpumon_rect.height = win_height - cpumon_rect.y - frm_width;
+	if(cpumon_rect.height > cpumon_rect.width) {
 		cpumon_rect.height = cpumon_rect.width;
-	} else {
-		cpumon_rect.height = win_height - frm_width * 2;
 	}
 
 	cpumon_move(cpumon_rect.x, cpumon_rect.y);
@@ -163,22 +180,38 @@ static void layout(void)
 
 static void draw_window(void)
 {
-	int bevel = 1;
+	int ypos;
+	char buf[256];
+
+	XClearWindow(dpy, win);
 
 	draw_frame(0, 0, win_width, win_height, bevel);
 	draw_frame(cpumon_rect.x - bevel, cpumon_rect.y - bevel,
 			cpumon_rect.width + bevel * 2, cpumon_rect.height + bevel * 2,
 			-bevel);
 
+	XSetForeground(dpy, gc, uicolor[COL_FG].pixel);
+	XSetBackground(dpy, gc, uicolor[COL_BG].pixel);
+
+	ypos = cpumon_rect.y - bevel - font->descent - 2;
+	sprintf(buf, "CPU %3d%%", smon.single * 100 >> 7);
+	XDrawString(dpy, win, gc, cpumon_rect.x, ypos, buf, strlen(buf));
+
 	cpumon_draw();
 
 	XFlush(dpy);
 }
 
+static void point(XPoint *p, int x, int y)
+{
+	p->x = x;
+	p->y = y;
+}
+
 static void draw_frame(int x, int y, int w, int h, int depth)
 {
 	int bevel;
-	XPoint v[3];
+	XPoint v[4];
 
 	if(depth == 0) return;
 
@@ -187,19 +220,47 @@ static void draw_frame(int x, int y, int w, int h, int depth)
 	if(bevel == 1) {
 		XSetLineAttributes(dpy, gc, bevel, LineSolid, CapButt, JoinBevel);
 
-		v[0].x = x; v[0].y = y + h - 1;
-		v[1].x = x; v[1].y = y;
-		v[2].x = x + w - 1; v[2].y = y;
+		point(v, x, y + h - 1);
+		point(v + 1, x, y);
+		point(v + 2, x + w - 1, y);
 
 		XSetForeground(dpy, gc, uicolor[depth > 0 ? COL_BGHI : COL_BGLO].pixel);
 		XDrawLines(dpy, win, gc, v, 3, CoordModeOrigin);
 
-		v[0].x = x + w - 1; v[0].y = y;
-		v[1].x = x + w - 1; v[1].y = y + h - 1;
-		v[2].x = x; v[2].y = y + h - 1;
+		point(v, x + w - 1, y);
+		point(v + 1, x + w - 1, y + h - 1);
+		point(v + 2, x, y + h - 1);
 
 		XSetForeground(dpy, gc, uicolor[depth > 0 ? COL_BGLO : COL_BGHI].pixel);
 		XDrawLines(dpy, win, gc, v, 3, CoordModeOrigin);
+	} else {
+		XSetForeground(dpy, gc, uicolor[depth > 0 ? COL_BGHI : COL_BGLO].pixel);
+
+		point(v, x, y);
+		point(v + 1, x + bevel, y + bevel);
+		point(v + 2, x + bevel, y + h - bevel);
+		point(v + 3, x, y + h);
+		XFillPolygon(dpy, win, gc, v, 4, Convex, CoordModeOrigin);
+
+		point(v, x, y);
+		point(v + 1, x + w, y);
+		point(v + 2, x + w - bevel, y + bevel);
+		point(v + 3, x + bevel, y + bevel);
+		XFillPolygon(dpy, win, gc, v, 4, Convex, CoordModeOrigin);
+
+		XSetForeground(dpy, gc, uicolor[depth > 0 ? COL_BGLO : COL_BGHI].pixel);
+
+		point(v, x + w, y);
+		point(v + 1, x + w, y + h);
+		point(v + 2, x + w - bevel, y + h - bevel);
+		point(v + 3, x + w - bevel, y + bevel);
+		XFillPolygon(dpy, win, gc, v, 4, Convex, CoordModeOrigin);
+
+		point(v, x + w, y + h);
+		point(v + 1, x, y + h);
+		point(v + 2, x + bevel, y + h - bevel);
+		point(v + 3, x + h - bevel, y + h - bevel);
+		XFillPolygon(dpy, win, gc, v, 4, Convex, CoordModeOrigin);
 	}
 }
 
@@ -210,6 +271,7 @@ static int create_window(const char *title, int width, int height)
 	XWindowAttributes winattr;
 	XVisualInfo vtmpl;
 	int num_match;
+	MotifWmHints mwmhints = {0};
 
 	xattr.background_pixel = BlackPixel(dpy, scr);
 	xattr.colormap = cmap = DefaultColormap(dpy, scr);
@@ -219,13 +281,21 @@ static int create_window(const char *title, int width, int height)
 		fprintf(stderr, "failed to create window\n");
 		return -1;
 	}
-	XSelectInput(dpy, win, StructureNotifyMask | ExposureMask | KeyPressMask);
+	XSelectInput(dpy, win, StructureNotifyMask | ExposureMask | KeyPressMask |
+			ButtonPressMask | Button1MotionMask);
 
 	if(XStringListToTextProperty((char**)&title, 1, &txprop)) {
 		XSetWMName(dpy, win, &txprop);
 		XSetWMIconName(dpy, win, &txprop);
 	}
 	XSetWMProtocols(dpy, win, &xa_wm_del, 1);
+
+	/* ask for an undecorated window */
+	mwmhints.flags = MWM_HINTS_DECORATIONS;
+	mwmhints.decorations = 0;
+	XChangeProperty(dpy, win, xa_mwm_hints, xa_mwm_hints, 32, PropModeReplace,
+			(unsigned char*)&mwmhints, sizeof mwmhints / sizeof(long));
+
 
 	XGetWindowAttributes(dpy, win, &winattr);
 	vtmpl.visualid = winattr.visual->visualid;
@@ -235,7 +305,8 @@ static int create_window(const char *title, int width, int height)
 
 static void proc_event(XEvent *ev)
 {
-	static int mapped;
+	static int mapped, prev_x, prev_y;
+	int i;
 	KeySym sym;
 
 	switch(ev->type) {
@@ -260,9 +331,36 @@ static void proc_event(XEvent *ev)
 				quit = 1;
 				break;
 
+			case XK_grave:
+				printf("CPU: %d%%\n", smon.single);
+				for(i=0; i<smon.num_cpus; i++) {
+					printf("  %d%%", smon.cpu[i]);
+				}
+				putchar('\n');
+				break;
+
 			default:
 				break;
 			}
+		}
+		break;
+
+	case ButtonPress:
+		if(ev->xbutton.button == Button1) {
+			prev_x = ev->xbutton.x_root;
+			prev_y = ev->xbutton.y_root;
+		}
+		break;
+
+	case MotionNotify:
+		if(ev->xmotion.state & Button1MotionMask) {
+			int dx = ev->xmotion.x_root - prev_x;
+			int dy = ev->xmotion.y_root - prev_y;
+			prev_x = ev->xmotion.x_root;
+			prev_y = ev->xmotion.y_root;
+			win_x += dx;
+			win_y += dy;
+			XMoveWindow(dpy, win, win_x, win_y);
 		}
 		break;
 
@@ -275,8 +373,9 @@ static void proc_event(XEvent *ev)
 		break;
 
 	case ConfigureNotify:
+		win_x = ev->xconfigure.x;
+		win_y = ev->xconfigure.y;
 		if(ev->xconfigure.width != win_width || ev->xconfigure.height != win_height) {
-			printf("configure notify: %dx%d\n", ev->xconfigure.width, ev->xconfigure.height);
 			win_width = ev->xconfigure.width;
 			win_height = ev->xconfigure.height;
 			layout();

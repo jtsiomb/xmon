@@ -18,7 +18,7 @@ static int rshift, gshift, bshift;
 static int xpos, ypos;
 
 struct color grad[GRAD_COLORS] = {
-	{0, 8, 64},
+	{5, 12, 80},
 	{128, 8, 4},
 	{255, 128, 64},
 	{255, 250, 220}
@@ -55,8 +55,8 @@ int cpumon_init(void)
 		if(!XAllocColor(dpy, cmap, colors + i)) {
 			fprintf(stderr, "failed to allocate color %d\n", i);
 		} else {
-			printf("color %06lx: %3u %3u %3u\n", colors[i].pixel,
-					colors[i].red >> 8, colors[i].green >> 8, colors[i].blue >> 8);
+			/*printf("color %06lx: %3u %3u %3u\n", colors[i].pixel,
+					colors[i].red >> 8, colors[i].green >> 8, colors[i].blue >> 8);*/
 		}
 	}
 

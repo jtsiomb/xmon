@@ -11,6 +11,7 @@ XVisualInfo *vinf;
 Colormap cmap;
 GC gc;
 XFontStruct *font;
+int font_height;
 
 int quit;
 

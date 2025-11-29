@@ -18,6 +18,7 @@ static int cpucount, curupd;
 static char *statbuf;
 static int sbufsz;
 
+static int calc_usage(unsigned long *cval, unsigned long *pval);
 static int parse_cpustat(int cur);
 
 int sysmon_init(void)
@@ -46,7 +47,7 @@ int sysmon_init(void)
 		goto fail;
 	}
 
-	if(!(cpustat = malloc(cpucount * sizeof *cpustat))) {
+	if(!(cpustat = malloc((cpucount + 1) * sizeof *cpustat))) {
 		fprintf(stderr, "failed to allocate ping-pong buffer for %d cpus\n", cpucount);
 		goto fail;
 	}
@@ -78,8 +79,7 @@ fail:
 
 void sysmon_update(void)
 {
-	int i, j, nextupd;
-	unsigned long delta[7], sum;
+	int i, nextupd;
 
 	nextupd = curupd ^ 1;
 
@@ -90,28 +90,36 @@ void sysmon_update(void)
 	parse_cpustat(curupd);
 
 	for(i=0; i<cpucount; i++) {
-		sum = 0;
-		for(j=0; j<7; j++) {
-			delta[j] = cpustat[i].val[curupd][j] - cpustat[i].val[nextupd][j];
-			sum += delta[j];
-		}
-
-		if(sum) {
-			smon.cpu[i] = 128 - (delta[3] << 7) / sum;
-			if(smon.cpu[i] >= 128) {
-				smon.cpu[i] = 127;
-			}
+		smon.cpu[i] = calc_usage(cpustat[i].val[curupd], cpustat[i].val[nextupd]);
+		if(smon.cpu[i] >= 128) {
+			smon.cpu[i] = 127;
 		}
 	}
+	smon.single = calc_usage(cpustat[cpucount].val[curupd], cpustat[cpucount].val[nextupd]);
 
 	curupd = nextupd;
 }
 
+static int calc_usage(unsigned long *cval, unsigned long *pval)
+{
+	unsigned long delta[7], sum = 0;
+	int i;
+
+	for(i=0; i<7; i++) {
+		delta[i] = cval[i] - pval[i];
+		sum += delta[i];
+	}
+
+	return sum ? 128 - (delta[3] << 7) / sum : 0;
+}
+
 static int parse_cpustat(int cur)
 {
-	int count, cpuidx;
+	int count;
 	char *line, *end;
 	struct cpustat *cst;
+	unsigned long *val;
+	unsigned long cpuidx;
 
 	cst = cpustat;
 	count = cpucount;
@@ -124,18 +132,30 @@ static int parse_cpustat(int cur)
 		if(end - line < 5) return -1;	/* won't even fit "cpuN " */
 		*end = 0;
 
-		if(memcmp(line, "cpu", 3) != 0 || !isdigit(line[3])) {
+		if(memcmp(line, "cpu", 3) != 0) {
 			line = end + 1;
 			continue;
 		}
 
-		if(sscanf(line, "cpu%d %lu %lu %lu %lu %lu %lu %lu", &cpuidx, cst->val[cur],
-					cst->val[cur] + 1, cst->val[cur] + 2, cst->val[cur] + 3, cst->val[cur] + 4,
-					cst->val[cur] + 5, cst->val[cur] + 6) < 8) {
-			return -1;
+		if(isdigit(line[3])) {
+			/* specific CPU usage line */
+			val = cst->val[cur];
+			if(sscanf(line, "cpu%lu %lu %lu %lu %lu %lu %lu %lu", &cpuidx, val,
+						val + 1, val + 2, val + 3, val + 4, val + 5, val + 6) < 8) {
+				return -1;
+			}
+
+			count--;
+			cst++;
+
+		} else {
+			/* average CPU usage line, we should encounter only one */
+			val = cpustat[cpucount].val[cur];
+			if(sscanf(line, "cpu %lu %lu %lu %lu %lu %lu %lu", val, val + 1,
+						val + 2, val + 3, val + 4, val + 5, val + 6) < 7) {
+				return -1;
+			}
 		}
-		count--;
-		cst++;
 		line = end + 1;
 	}
 	return 0;
