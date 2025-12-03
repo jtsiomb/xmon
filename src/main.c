@@ -180,7 +180,9 @@ static void draw_window(unsigned int draw)
 {
 	if(draw & UI_FRAME) {
 		XClearWindow(dpy, win);
-		draw_frame(0, 0, win_width, win_height, bevel);
+		if(!opt.vis.decor) {
+			draw_frame(0, 0, win_width, win_height, bevel);
+		}
 	}
 
 	if(draw & UI_CPU) {
