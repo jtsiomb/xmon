@@ -34,10 +34,17 @@ void memmon_resize(int x, int y)
 void memmon_draw(void)
 {
 	char buf[128], *ptr;
-	long used = smon.mem_total - smon.mem_free;
-	long ratio = used * 100 / smon.mem_total;
-	int baseline = rect.y + font_height - font->descent - 1;
-	int y, bar, max_bar, bar_thick;
+	long used, ratio;
+	int baseline, y, bar, max_bar, bar_thick;
+
+	if(smon.mem_total <= 0) return;
+
+	XSetForeground(dpy, gc, opt.vis.uicolor[COL_BG].pixel);
+	XFillRectangle(dpy, win, gc, rect.x, rect.y, rect.width, font_height * 2);
+
+	used = smon.mem_total - smon.mem_free;
+	ratio = used * 100 / smon.mem_total;
+	baseline = rect.y + font_height - font->descent - 1;
 
 	XSetForeground(dpy, gc, opt.vis.uicolor[COL_FG].pixel);
 
@@ -79,7 +86,7 @@ static int memfmt(char *buf, long mem)
 	int frac = 0;
 	static const char *suffix[] = {"k", "m", "g", "t", "p", 0};
 
-	while(mem > 1024 && suffix[idx + 1]) {
+	while(mem >= 1024 && suffix[idx + 1]) {
 		frac = mem & 1023;
 		mem >>= 10;
 		idx++;

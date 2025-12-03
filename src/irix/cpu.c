@@ -63,31 +63,25 @@ void cpu_update(void)
 
 	for(i=0; i<cpucount; i++) {
 		smon.cpu[i] = calc_usage(cpustat[i].val[curupd], cpustat[i].val[nextupd]);
-		if(smon.cpu[i] >= 128) {
-			smon.cpu[i] = 127;
-		}
 	}
 	smon.single = calc_usage(cpustat[i].val[curupd], cpustat[i].val[nextupd]);
-	if(smon.single >= 128) {
-		smon.single = 127;
-	}
 
 	curupd = nextupd;
 }
 
 static int calc_usage(unsigned long *cval, unsigned long *pval)
 {
-	unsigned long delta[7], usage, sum = 0;
+	unsigned long delta[6], usage, sum = 0;
 	int i;
 
-	for(i=0; i<7; i++) {
+	for(i=0; i<6; i++) {
 		delta[i] = cval[i] - pval[i];
 		sum += delta[i];
 	}
 
 	usage = delta[CPU_USER] + delta[CPU_KERNEL] + delta[CPU_INTR];
 
-	return sum ? 128 - (usage << 7) / sum : 0;
+	return sum ? (usage << 7) / sum : 0;
 }
 
 static int read_cpustat(int cur)

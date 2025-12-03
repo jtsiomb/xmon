@@ -1,0 +1,16 @@
+obj = src/cpumon.o src/main.o src/memmon.o src/options.o src/irix/cpu.o \
+	  src/irix/mem.o
+bin = xmon
+
+CFLAGS = -g3 -Isrc -common
+LDFLAGS = -lX11
+
+$(bin): $(obj)
+	$(CC) -o $@ $(obj) $(LDFLAGS)
+
+.c.o:
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+.PHONY: clean
+clean:
+	rm -f $(obj) $(bin)

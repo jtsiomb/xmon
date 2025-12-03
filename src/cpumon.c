@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <alloca.h>
 #include "xmon.h"
 #include "options.h"
 
@@ -107,8 +108,16 @@ void cpumon_update(void)
 	int i, row_offs, cur, col0;
 	unsigned char *row;
 	unsigned int *row32;
+	int *cpucol;
 
 	if(!ximg || !fb) return;
+
+	cpucol = alloca(smon.num_cpus * sizeof *cpucol);
+	for(i=0; i<smon.num_cpus; i++) {
+		int usage = smon.cpu[i];
+		if(usage >= 128) usage = 127;
+		cpucol[i] = (usage * opt.cpu.ncolors) >> 7;
+	}
 
 	row_offs = (ximg->height - 1) * ximg->bytes_per_line;
 
@@ -122,7 +131,7 @@ void cpumon_update(void)
 	case 8:
 		for(i=0; i<ximg->width; i++) {
 			cur = i * smon.num_cpus / ximg->width;
-			col0 = (smon.cpu[cur] * opt.cpu.ncolors) >> 7;
+			col0 = cpucol[cur];
 			*row++ = colors[col0].pixel;
 		}
 		break;
@@ -132,7 +141,7 @@ void cpumon_update(void)
 		for(i=0; i<ximg->width; i++) {
 			int r, g, b;
 			cur = i * smon.num_cpus / ximg->width;
-			col0 = (smon.cpu[cur] * opt.cpu.ncolors) >> 7;
+			col0 = cpucol[cur];
 
 			r = colors[col0].red >> 8;
 			g = colors[col0].green >> 8;

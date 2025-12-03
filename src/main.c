@@ -1,4 +1,3 @@
-#include <X11/X.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +6,7 @@
 #include <unistd.h>
 #include <sys/select.h>
 #include <X11/Xlib.h>
+#include <X11/keysym.h>
 #include <X11/Xutil.h>
 #include "xmon.h"
 #include "options.h"
