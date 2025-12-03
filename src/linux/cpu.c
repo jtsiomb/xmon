@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include "xmon.h"
 
 struct cpustat {
@@ -94,6 +92,9 @@ void cpu_update(void)
 		}
 	}
 	smon.single = calc_usage(cpustat[cpucount].val[curupd], cpustat[cpucount].val[nextupd]);
+	if(smon.single >= 128) {
+		smon.single = 127;
+	}
 
 	curupd = nextupd;
 }
