@@ -4,7 +4,6 @@
 #include <errno.h>
 #include "xmon.h"
 
-static FILE *fp;
 static int has_memavail;
 
 static int match_field(const char *line, const char *name, long *retval);
@@ -13,6 +12,7 @@ int mem_init(void)
 {
 	char buf[256];
 	long val;
+	FILE *fp;
 
 	if(!(fp = fopen("/proc/meminfo", "rb"))) {
 		fprintf(stderr, "failed to open /proc/meminfo: %s\n", strerror(errno));
@@ -33,6 +33,7 @@ int mem_init(void)
 		fclose(fp);
 		return -1;
 	}
+	fclose(fp);
 
 	return 0;
 }
@@ -41,8 +42,11 @@ void mem_update(void)
 {
 	char buf[256];
 	long mfree, mcache;
+	FILE *fp;
 
-	fseek(fp, 0, SEEK_SET);
+	if(!(fp = fopen("/proc/meminfo", "rb"))) {
+		return;
+	}
 
 	if(has_memavail) {
 		/* linux >= 3.14 has MemAvailable */
@@ -63,6 +67,8 @@ void mem_update(void)
 		}
 		smon.mem_free = mfree + mcache;
 	}
+
+	fclose(fp);
 }
 
 static int match_field(const char *line, const char *name, long *retval)
