@@ -1,0 +1,26 @@
+name: MacOS X build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: install dependencies
+      run: |
+        brew install xquartz libx11
+
+    - name: build xmon
+      run: make
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: xmon-macosx
+        path: xmon
