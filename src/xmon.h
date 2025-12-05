@@ -3,23 +3,17 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include "widget.h"
 
 struct sysmon {
-	int single;
-	int *cpu;	/* CPU usage 0-127 */
+	/* CPU usage range [0, 127] */
+	int single;		/* aggregate CPU usage for all CPUs */
+	int *cpu;		/* per CPU usage */
 	int num_cpus;
 
-	long mem_total, mem_free;
-};
+	float loadavg[3];
 
-/* UI colors */
-enum {
-	COL_FG,
-	COL_BG,
-	COL_BGHI,
-	COL_BGLO,
-
-	NUM_UICOLORS
+	long mem_total, mem_free;	/* in kb */
 };
 
 extern struct sysmon smon;
@@ -37,23 +31,27 @@ extern int quit;
 
 int cpu_init(void);
 int mem_init(void);
+int load_init(void);
 
 void cpu_update(void);
 void mem_update(void);
+void load_update(void);
 
 int cpumon_init(void);
 void cpumon_destroy(void);
 void cpumon_move(int x, int y);
 void cpumon_resize(int x, int y);
+int cpumon_height(int w);
 void cpumon_update(void);
 void cpumon_draw(void);
 
-int memmon_init(void);
-void memmon_destroy(void);
 void memmon_move(int x, int y);
 void memmon_resize(int x, int y);
 void memmon_draw(void);
 
-void draw_frame(int x, int y, int w, int h, int depth);
+void loadmon_move(int x, int y);
+void loadmon_resize(int x, int y);
+int loadmon_height(int w);
+void loadmon_draw(void);
 
 #endif	/* XMON_H_ */

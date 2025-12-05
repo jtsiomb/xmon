@@ -3,21 +3,11 @@
 #include "xmon.h"
 #include "options.h"
 
-static XColor col_bar = {0, 0x5000, 0x5000, 0xffff};
+/*static XColor col_bar = {0, 0x5000, 0x5000, 0xffff};*/
 static XRectangle rect;
 
 static int memfmt(char *buf, long mem);
 
-
-int memmon_init(void)
-{
-	XAllocColor(dpy, cmap, &col_bar);
-	return 0;
-}
-
-void memmon_destroy(void)
-{
-}
 
 void memmon_move(int x, int y)
 {
@@ -35,7 +25,7 @@ void memmon_draw(void)
 {
 	char buf[128], *ptr;
 	long used, ratio;
-	int baseline, y, bar, max_bar, bar_thick;
+	int baseline, y;
 
 	if(smon.mem_total <= 0) return;
 
@@ -59,6 +49,8 @@ void memmon_draw(void)
 	XDrawString(dpy, win, gc, rect.x, baseline, buf, strlen(buf));
 
 	y = baseline + font->descent + 1 + BEVEL;
+	draw_bar(rect.x, y, rect.width, used, smon.mem_total);
+#if 0
 	bar_thick = BEVEL * 2;
 	if(bar_thick < 4) bar_thick = 4;
 	max_bar = rect.width - BEVEL * 2;
@@ -78,6 +70,7 @@ void memmon_draw(void)
 		XSetForeground(dpy, gc, opt.vis.uicolor[COL_BGHI].pixel);
 	}
 	XFillRectangle(dpy, win, gc, rect.x + BEVEL + bar, y, max_bar - bar, bar_thick);
+#endif
 }
 
 static int memfmt(char *buf, long mem)

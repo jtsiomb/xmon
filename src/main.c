@@ -13,9 +13,10 @@
 
 /* UI element bits */
 enum {
-	UI_FRAME	= 1,
-	UI_CPU		= 2,
-	UI_MEM		= 4,
+	UI_FRAME	= 0x0001,
+	UI_CPU		= 0x0002,
+	UI_MEM		= 0x0004,
+	UI_LOAD		= 0x0008,
 
 	UI_ALL		= 0x7fff
 };
@@ -39,8 +40,6 @@ Window win, root;
 XVisualInfo *vinf;
 Colormap cmap;
 GC gc;
-XFontStruct *font;
-int font_height;
 
 int quit;
 
@@ -55,7 +54,8 @@ static int bevel;
 static struct timeval tv0;
 
 
-static XRectangle cpu_rect, mem_rect, minrect;
+static XRectangle minrect;
+static XRectangle cpu_rect, mem_rect, load_rect;
 
 
 static void layout(void);
@@ -70,7 +70,6 @@ int main(int argc, char **argv)
 	XEvent ev;
 	struct timeval tv;
 	long prev_upd, msec, dt;
-	int i;
 
 	init_opt();
 	read_config("xmon.conf");
@@ -84,6 +83,9 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	if(mem_init() == -1) {
+		return 1;
+	}
+	if(load_init() == -1) {
 		return 1;
 	}
 
@@ -106,24 +108,14 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if(!(font = XLoadQueryFont(dpy, opt.vis.font))) {
-		fprintf(stderr, "failed to load font: %s\n", opt.vis.font);
+	if(init_widgets() == -1) {
 		return 1;
 	}
-	font_height = font->ascent + font->descent;
-	XSetFont(dpy, gc, font->fid);
-
-	for(i=0; i<NUM_UICOLORS; i++) {
-		XAllocColor(dpy, cmap, opt.vis.uicolor + i);
-	}
-	XSetWindowBackground(dpy, win, opt.vis.uicolor[COL_BG].pixel);
-
 	if(cpumon_init() == -1) {
 		return 1;
 	}
-	if(memmon_init() == -1) {
-		return 1;
-	}
+
+	XSetWindowBackground(dpy, win, opt.vis.uicolor[COL_BG].pixel);
 
 	layout();
 	XResizeWindow(dpy, win, minrect.width, minrect.height);
@@ -172,10 +164,11 @@ int main(int argc, char **argv)
 
 			cpu_update();
 			mem_update();
+			load_update();
 
 			cpumon_update();
 
-			draw_window(UI_CPU | UI_MEM);
+			draw_window(UI_CPU | UI_MEM | UI_LOAD);
 		}
 	}
 
@@ -195,15 +188,23 @@ static void layout(void)
 	cpu_rect.x = frm_width;
 	cpu_rect.y = y;
 	cpu_rect.width = all_width;
-	cpu_rect.height = all_width;
-	if(cpu_rect.height > cpu_rect.width) {
-		cpu_rect.height = cpu_rect.width;
-	}
+	cpu_rect.height = cpumon_height(all_width);
 
 	cpumon_move(cpu_rect.x, cpu_rect.y);
 	cpumon_resize(cpu_rect.width, cpu_rect.height);
 
 	y += cpu_rect.height + frm_width;
+
+	/* load average */
+	load_rect.x = frm_width;
+	load_rect.y = y;
+	load_rect.width = all_width;
+	load_rect.height = loadmon_height(all_width);
+
+	loadmon_move(load_rect.x, load_rect.y);
+	loadmon_resize(load_rect.width, load_rect.height);
+
+	y += load_rect.height + frm_width;
 
 	/* memory monitor */
 	mem_rect.x = all_x;
@@ -233,73 +234,15 @@ static void draw_window(unsigned int draw)
 		cpumon_draw();
 	}
 
+	if(draw & UI_LOAD) {
+		loadmon_draw();
+	}
+
 	if(draw & UI_MEM) {
 		memmon_draw();
 	}
 
 	XFlush(dpy);
-}
-
-static void point(XPoint *p, int x, int y)
-{
-	p->x = x;
-	p->y = y;
-}
-
-void draw_frame(int x, int y, int w, int h, int depth)
-{
-	int bevel;
-	XPoint v[4];
-
-	if(depth == 0) return;
-
-	bevel = abs(depth);
-
-	if(bevel == 1) {
-		XSetLineAttributes(dpy, gc, bevel, LineSolid, CapButt, JoinBevel);
-
-		point(v, x, y + h - 1);
-		point(v + 1, x, y);
-		point(v + 2, x + w - 1, y);
-
-		XSetForeground(dpy, gc, opt.vis.uicolor[depth > 0 ? COL_BGHI : COL_BGLO].pixel);
-		XDrawLines(dpy, win, gc, v, 3, CoordModeOrigin);
-
-		point(v, x + w - 1, y);
-		point(v + 1, x + w - 1, y + h - 1);
-		point(v + 2, x, y + h - 1);
-
-		XSetForeground(dpy, gc, opt.vis.uicolor[depth > 0 ? COL_BGLO : COL_BGHI].pixel);
-		XDrawLines(dpy, win, gc, v, 3, CoordModeOrigin);
-	} else {
-		XSetForeground(dpy, gc, opt.vis.uicolor[depth > 0 ? COL_BGHI : COL_BGLO].pixel);
-
-		point(v, x, y);
-		point(v + 1, x + bevel, y + bevel);
-		point(v + 2, x + bevel, y + h - bevel);
-		point(v + 3, x, y + h);
-		XFillPolygon(dpy, win, gc, v, 4, Convex, CoordModeOrigin);
-
-		point(v, x, y);
-		point(v + 1, x + w, y);
-		point(v + 2, x + w - bevel, y + bevel);
-		point(v + 3, x + bevel, y + bevel);
-		XFillPolygon(dpy, win, gc, v, 4, Convex, CoordModeOrigin);
-
-		XSetForeground(dpy, gc, opt.vis.uicolor[depth > 0 ? COL_BGLO : COL_BGHI].pixel);
-
-		point(v, x + w, y);
-		point(v + 1, x + w, y + h);
-		point(v + 2, x + w - bevel, y + h - bevel);
-		point(v + 3, x + w - bevel, y + bevel);
-		XFillPolygon(dpy, win, gc, v, 4, Convex, CoordModeOrigin);
-
-		point(v, x + w, y + h);
-		point(v + 1, x, y + h);
-		point(v + 2, x + bevel, y + h - bevel);
-		point(v + 3, x + w - bevel, y + h - bevel);
-		XFillPolygon(dpy, win, gc, v, 4, Convex, CoordModeOrigin);
-	}
 }
 
 static int create_window(void)
@@ -352,7 +295,6 @@ static int create_window(void)
 static void proc_event(XEvent *ev)
 {
 	static int mapped, prev_x, prev_y;
-	int i;
 	KeySym sym;
 
 	switch(ev->type) {
@@ -375,14 +317,6 @@ static void proc_event(XEvent *ev)
 			switch(sym) {
 			case XK_Escape:
 				quit = 1;
-				break;
-
-			case XK_grave:
-				printf("CPU: %d%%\n", smon.single);
-				for(i=0; i<smon.num_cpus; i++) {
-					printf("  %d%%", smon.cpu[i]);
-				}
-				putchar('\n');
 				break;
 
 			default:

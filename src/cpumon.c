@@ -103,6 +103,13 @@ void cpumon_resize(int x, int y)
 	resize_framebuf(view_rect.width, view_rect.height);
 }
 
+int cpumon_height(int w)
+{
+	int h = w;
+	int min_h = font_height + 2 * BEVEL + 8;
+	return h < min_h ? min_h : h;
+}
+
 void cpumon_update(void)
 {
 	int i, row_offs, cur, col0;
