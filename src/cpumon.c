@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <alloca.h>
+#ifndef NO_XSHM
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#endif
 #include "xmon.h"
 #include "options.h"
 
@@ -12,7 +16,6 @@ struct color {
 };
 
 static XColor *colors;
-static unsigned char *fb;
 static XImage *ximg;
 static int rshift, gshift, bshift;
 static XRectangle rect, view_rect, lb_rect;
@@ -113,11 +116,13 @@ int cpumon_height(int w)
 void cpumon_update(void)
 {
 	int i, row_offs, cur, col0;
-	unsigned char *row;
+	unsigned char *fb, *row;
 	unsigned int *row32;
 	int *cpucol;
 
-	if(!ximg || !fb) return;
+	if(!ximg) return;
+
+	fb = (unsigned char*)ximg->data;
 
 	cpucol = alloca(smon.num_cpus * sizeof *cpucol);
 	for(i=0; i<smon.num_cpus; i++) {
@@ -179,45 +184,99 @@ void cpumon_draw(void)
 	XSetBackground(dpy, gc, opt.vis.uicolor[COL_BG].pixel);
 	XDrawString(dpy, win, gc, lb_rect.x, baseline, buf, strlen(buf));
 
-	if(ximg && fb) {
-		XPutImage(dpy, win, gc, ximg, 0, 0, view_rect.x, view_rect.y, ximg->width,
-				ximg->height);
+	if(!ximg) return;
+
+#ifndef NO_XSHM
+	if(have_xshm) {
+		XShmPutImage(dpy, win, gc, ximg, 0, 0, view_rect.x, view_rect.y,
+				ximg->width, ximg->height, False);
+	} else
+#endif
+	{
+		XPutImage(dpy, win, gc, ximg, 0, 0, view_rect.x, view_rect.y,
+				ximg->width, ximg->height);
 	}
 }
 
+static void free_framebuf(void)
+{
+	if(!ximg) return;
 
+#ifndef NO_XSHM
+	if(have_xshm) {
+		XShmDetach(dpy, &xshm);
+		XDestroyImage(ximg);
+		if(xshm.shmaddr != (void*)-1) {
+			shmdt(xshm.shmaddr);
+			xshm.shmaddr = (void*)-1;
+		}
+		if(xshm.shmid != -1) {
+			shmctl(xshm.shmid, IPC_RMID, 0);
+			xshm.shmid = -1;
+		}
+	} else
+#endif
+	{
+		XDestroyImage(ximg);
+	}
+	ximg = 0;
+}
 
 static int resize_framebuf(int width, int height)
 {
-	int pitch;
-
-	if(!ximg) {
-		if(!(ximg = XCreateImage(dpy, vinf->visual, vinf->depth, ZPixmap, 0, 0,
-						width, height, 8, 0))) {
-			return -1;
-		}
-		rshift = mask_to_shift(ximg->red_mask);
-		gshift = mask_to_shift(ximg->green_mask);
-		bshift = mask_to_shift(ximg->blue_mask);
+	if(ximg && width == ximg->width && height == ximg->height) {
+		return 0;
 	}
 
-	free(fb);
-	fb = 0;
-	ximg->data = 0;
+	free_framebuf();
 
 	if(width <= 0 || height <= 0) {
 		return -1;
 	}
 
-	pitch = width * ximg->bits_per_pixel;
-	if(!(fb = calloc(1, height * pitch))) {
-		return -1;
-	}
+#ifndef NO_XSHM
+	if(have_xshm) {
+		if(!(ximg = XShmCreateImage(dpy, vinf->visual, vinf->depth, ZPixmap, 0,
+						&xshm, width, height))) {
+			return -1;
+		}
+		if((xshm.shmid = shmget(IPC_PRIVATE, ximg->bytes_per_line * ximg->height,
+				IPC_CREAT | 0777)) == -1) {
+			fprintf(stderr, "failed to create shared memory, fallback to no XShm\n");
+			free_framebuf();
+			goto no_xshm;
+		}
+		if((xshm.shmaddr = ximg->data = shmat(xshm.shmid, 0, 0)) == (void*)-1) {
+			fprintf(stderr, "failed to attach shared memory, fallback to no XShm\n");
+			free_framebuf();
+			goto no_xshm;
+		}
+		xshm.readOnly = True;
+		if(!XShmAttach(dpy, &xshm)) {
+			fprintf(stderr, "XShmAttach failed\n");
+			free_framebuf();
+			goto no_xshm;
+		}
+	} else {
+no_xshm:
+		have_xshm = 0;
+#else
+	{
+#endif
+		if(!(ximg = XCreateImage(dpy, vinf->visual, vinf->depth, ZPixmap, 0, 0,
+						width, height, 8, 0))) {
+			return -1;
+		}
 
-	ximg->width = width;
-	ximg->height = height;
-	ximg->bytes_per_line = pitch;
-	ximg->data = (char*)fb;
+		if(!(ximg->data = calloc(1, height * ximg->bytes_per_line))) {
+			XDestroyImage(ximg);
+			ximg = 0;
+			return -1;
+		}
+	}
+	rshift = mask_to_shift(ximg->red_mask);
+	gshift = mask_to_shift(ximg->green_mask);
+	bshift = mask_to_shift(ximg->blue_mask);
 	return 0;
 }
 

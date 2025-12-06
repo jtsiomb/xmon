@@ -41,6 +41,11 @@ XVisualInfo *vinf;
 Colormap cmap;
 GC gc;
 
+#ifndef NO_XSHM
+XShmSegmentInfo xshm;
+int have_xshm;
+#endif
+
 int quit;
 
 static Atom xa_wm_proto, xa_wm_del;
@@ -98,6 +103,10 @@ int main(int argc, char **argv)
 	xa_wm_proto = XInternAtom(dpy, "WM_PROTOCOLS", False);
 	xa_wm_del = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
 	xa_mwm_hints = XInternAtom(dpy, "_MOTIF_WM_HINTS", False);
+
+#ifndef NO_XSHM
+	have_xshm = XShmQueryExtension(dpy);
+#endif
 
 	if(create_window() == -1) {
 		return 1;

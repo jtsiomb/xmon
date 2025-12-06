@@ -3,6 +3,9 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#ifndef NO_XSHM
+#include <X11/extensions/XShm.h>
+#endif
 #include "widget.h"
 
 struct sysmon {
@@ -24,6 +27,12 @@ extern Window win, root;
 extern XVisualInfo *vinf;
 extern Colormap cmap;
 extern GC gc;
+
+#ifndef NO_XSHM
+extern XShmSegmentInfo xshm;
+extern int have_xshm;
+#endif
+
 extern XFontStruct *font;
 extern int font_height;
 

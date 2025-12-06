@@ -5,7 +5,7 @@ obj = src/cpumon.o src/main.o src/memmon.o src/options.o src/irix/cpu.o \
 bin = xmon
 
 CFLAGS = -g3 -Isrc
-LDFLAGS = -lX11
+LDFLAGS = -lX11 -lXext
 
 $(bin): $(obj)
 	$(CC) -o $@ $(obj) $(LDFLAGS)
