@@ -29,7 +29,7 @@ among the CPUs/cores, the vertical axis is time, and the plot intensity/color is
 a function of the usage of the corresponding core.
 
 I got the idea to use a waterfall plot from a comment Dave Plummer made, while
-interviewing Dave Cuttler, about potentially using a "heatmap" to visualize CPU
+interviewing Dave Cutler, about potentially using a "heatmap" to visualize CPU
 utilization for hundreds of cores/threads. I ended up going with a waterfall
 plot instead of a heatmap, because it also conveys utilization over time.
 
