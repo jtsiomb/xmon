@@ -24,6 +24,10 @@ struct cpu_options {
 	int ncolors;
 };
 
+struct net_options {
+	const char *ifname;
+};
+
 struct options {
 	int x, y, xsz, ysz;
 	int upd_interv;
@@ -32,6 +36,7 @@ struct options {
 
 	struct vis_options vis;
 	struct cpu_options cpu;
+	struct net_options net;
 };
 
 extern struct options opt;

@@ -120,6 +120,13 @@ int parse_args(int argc, char **argv)
 				}
 				calc_bevel_colors();
 
+			} else if(strcmp(argv[i], "-net-if") == 0) {
+				if(!argv[++i]) {
+					fprintf(stderr, "-net-if must be followed by an interface name\n");
+					return -1;
+				}
+				opt.net.ifname = argv[i];
+
 			} else if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0) {
 				for(j=0; usage_str[j]; j++) {
 					printf(usage_str[j], argv[0]);
@@ -168,7 +175,7 @@ static int parse_color(const char *str, XColor *col)
 
 	if(!str) return -1;
 
-	if(sscanf(str, "\#%u", &packed) == 1) {
+	if(sscanf(str, "#%x", &packed) == 1) {
 		r = (packed >> 16) & 0xff;
 		g = (packed >> 8) & 0xff;
 		b = packed & 0xff;

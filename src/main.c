@@ -56,7 +56,7 @@ static int win_x, win_y;
 static int win_width, win_height;
 static int frm_width;	/* total with bevels */
 static int bevel;
-static unsigned int all_widgets;
+static unsigned int ui_active_widgets;
 static unsigned int dirty;
 
 static struct timeval tv0;
@@ -142,10 +142,10 @@ int main(int argc, char **argv)
 	}
 
 	/* compute bitmask to redraw all enabled widgets */
-	if(opt.mon & MON_CPU) all_widgets |= UI_CPU;
-	if(opt.mon & MON_MEM) all_widgets |= UI_MEM;
-	if(opt.mon & MON_LOAD) all_widgets |= UI_LOAD;
-	if(opt.mon & MON_NET) all_widgets |= UI_NET;
+	if(opt.mon & MON_CPU) ui_active_widgets |= UI_CPU;
+	if(opt.mon & MON_MEM) ui_active_widgets |= UI_MEM;
+	if(opt.mon & MON_LOAD) ui_active_widgets |= UI_LOAD;
+	if(opt.mon & MON_NET) ui_active_widgets |= UI_NET;
 
 	XSetWindowBackground(dpy, win, opt.vis.uicolor[COL_BG].pixel);
 
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
 				net_update();
 			}
 
-			dirty |= all_widgets;
+			dirty |= ui_active_widgets;
 			draw_window();
 		}
 	}
@@ -282,7 +282,7 @@ static void layout(void)
 	minrect.width = win_width;
 	minrect.height = y - SEPSZ + frm_width;
 
-	dirty = UI_ALL;
+	dirty = UI_FRAME | ui_active_widgets;
 }
 
 #define DRAWSEP(y)	draw_sep(0, (y) - SEPSZ / 2, win_width)
@@ -379,7 +379,7 @@ static void proc_event(XEvent *ev)
 		if(!mapped || ev->xexpose.count > 0) {
 			break;
 		}
-		dirty = UI_ALL;
+		dirty = UI_FRAME | ui_active_widgets;
 		draw_window();
 		break;
 

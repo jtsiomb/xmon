@@ -76,11 +76,13 @@ int netmon_height(int w)
 
 void netmon_draw(void)
 {
-	char tbuf[64], rbuf[64];
+	char buf[128], tbuf[64], rbuf[64];
 	int x, y, baseline;
 	unsigned int rval, tval, bval, idx, bar_x;
 	unsigned long msec, interv;
 	XRectangle *rbar, *tbar, *bbar;
+
+	if(!plot) return;
 
 	rx_acc += smon.net_rx;
 	tx_acc += smon.net_tx;
@@ -118,15 +120,28 @@ void netmon_draw(void)
 	XFillRectangle(dpy, win, gc, rect.x, rect.y, rect.width, font_height * 3);
 
 	XSetForeground(dpy, gc, opt.vis.uicolor[COL_FG].pixel);
-	XDrawString(dpy, win, gc, rect.x, baseline, "NET", 3);
+	if(opt.net.ifname) {
+		sprintf(buf, "NET: %s", opt.net.ifname);
+		XDrawString(dpy, win, gc, rect.x, baseline, buf, strlen(buf));
+	} else {
+		XDrawString(dpy, win, gc, rect.x, baseline, "NET", 3);
+	}
 
 	baseline += font_height;
 
 	XSetForeground(dpy, gc, opt.vis.uicolor[COL_FG].pixel);
 
+	y = baseline - font->ascent;
 	XDrawString(dpy, win, gc, rect.x + 4, baseline, rbuf, strlen(rbuf));
 	baseline += font_height;
 	XDrawString(dpy, win, gc, rect.x + 4, baseline, tbuf, strlen(tbuf));
+
+	XSetForeground(dpy, gc, col_rx.pixel);
+	XFillRectangle(dpy, win, gc, rect.x, y + 2, 3, font->ascent - 2);
+	y += font_height;
+	XSetForeground(dpy, gc, col_tx.pixel);
+	XFillRectangle(dpy, win, gc, rect.x, y + 2, 3, font->ascent - 2);
+
 
 	/* plot */
 
