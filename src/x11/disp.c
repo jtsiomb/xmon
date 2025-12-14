@@ -1,4 +1,3 @@
-#define NO_XSHM
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -223,31 +222,29 @@ struct image *create_image(unsigned int width, unsigned int height)
 
 #ifndef NO_XSHM
 	if(have_xshm) {
-		XShmSegmentInfo xshm;
+		XShmSegmentInfo *xshm = &imgdata->xshm;
 
 		if(!(ximg = XShmCreateImage(dpy, vinf->visual, vinf->depth, ZPixmap, 0,
-						&xshm, width, height))) {
+						xshm, width, height))) {
 			return 0;
 		}
-		if((xshm.shmid = shmget(IPC_PRIVATE, ximg->bytes_per_line * ximg->height,
+		if((xshm->shmid = shmget(IPC_PRIVATE, ximg->bytes_per_line * ximg->height,
 				IPC_CREAT | 0777)) == -1) {
 			fprintf(stderr, "failed to create shared memory, fallback to no XShm\n");
 			free_image(img);
 			goto no_xshm;
 		}
-		if((xshm.shmaddr = ximg->data = shmat(xshm.shmid, 0, 0)) == (void*)-1) {
+		if((xshm->shmaddr = ximg->data = shmat(xshm->shmid, 0, 0)) == (void*)-1) {
 			fprintf(stderr, "failed to attach shared memory, fallback to no XShm\n");
 			free_image(img);
 			goto no_xshm;
 		}
-		xshm.readOnly = True;
-		if(!XShmAttach(dpy, &xshm)) {
+		xshm->readOnly = True;
+		if(!XShmAttach(dpy, xshm)) {
 			fprintf(stderr, "XShmAttach failed\n");
 			free_image(img);
 			goto no_xshm;
 		}
-
-		imgdata->xshm = xshm;
 	} else {
 no_xshm:
 		have_xshm = 0;
