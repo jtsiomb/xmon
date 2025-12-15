@@ -56,5 +56,7 @@ struct image *create_image(unsigned int width, unsigned int height);
 void free_image(struct image *img);
 int resize_image(struct image *img, unsigned int width, unsigned int height);
 void blit_image(struct image *img, int x, int y);
+void blit_subimage(struct image *img, int dx, int dy, int sx, int sy,
+		unsigned int width, unsigned int height);
 
 #endif	/* DISP_H_ */

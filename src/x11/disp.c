@@ -316,6 +316,22 @@ void blit_image(struct image *img, int x, int y)
 	}
 }
 
+void blit_subimage(struct image *img, int dx, int dy, int sx, int sy,
+		unsigned int width, unsigned int height)
+{
+	struct image_data *imgdata = img->data;
+	XImage *ximg = imgdata->ximg;
+
+#ifndef NO_XSHM
+	if(have_xshm) {
+		XShmPutImage(dpy, win, gc, ximg, sx, sy, dx, dy, width, height, False);
+	} else
+#endif
+	{
+		XPutImage(dpy, win, gc, ximg, sx, sy, dx, dy, width, height);
+	}
+}
+
 static int create_window(void)
 {
 	XSetWindowAttributes xattr;

@@ -94,17 +94,21 @@ int cpumon_height(int w)
 	return h < min_h ? min_h : h;
 }
 
+#define MIN_COLW		(BEVEL > 8 ? BEVEL : 8)
+#define MIN_COL_STEP	(BEVEL * 2 + MIN_COLW)
+
+static int sep_disp;
+static unsigned int colw, col_step;
+
 void cpumon_update(void)
 {
+	int *cpucol;
 	unsigned char *fb, *row;
 	unsigned int *row32;
-	int *cpucol;
-	int cpunum, dcpu, col0;
-	unsigned int i, row_offs, cur, x;
+	int col0;
+	unsigned int i, j, row_offs, cur;
 
 	if(!img) return;
-
-	fb = (unsigned char*)img->pixels;
 
 	cpucol = alloca(smon.num_cpus * sizeof *cpucol);
 
@@ -113,6 +117,19 @@ void cpumon_update(void)
 		if(usage >= 128) usage = 127;
 		cpucol[i] = (usage * opt.cpu.ncolors) >> 7;
 	}
+
+	sep_disp = img->width >= smon.num_cpus * MIN_COL_STEP;
+	if(sep_disp) {
+		unsigned int usable_w = rect.width - smon.num_cpus * (BEVEL * 2);
+		colw = usable_w / smon.num_cpus / 2;
+		if(colw < MIN_COLW) colw = MIN_COLW;
+		col_step = rect.width / smon.num_cpus;
+		if(colw > rect.height / 6) {
+			colw = rect.height / 6;
+		}
+	}
+
+	fb = (unsigned char*)img->pixels;
 
 	row_offs = (img->height - 1) * img->pitch;
 
@@ -124,22 +141,46 @@ void cpumon_update(void)
 
 	switch(img->bpp) {
 	case 8:
-		for(i=0; i<img->width; i++) {
-			cur = i * smon.num_cpus / img->width;
-			col0 = cpucol[cur];
-			*row++ = colors[col0];
+		if(sep_disp) {
+			for(i=0; i<smon.num_cpus; i++) {
+				for(j=0; j<colw; j++) {
+					row[j] = cpucol[i];
+				}
+				row += colw;
+			}
+		} else {
+			for(i=0; i<img->width; i++) {
+				cur = i * smon.num_cpus / img->width;
+				col0 = cpucol[cur];
+				*row++ = colors[col0];
+			}
 		}
 		break;
 
 	case 32:
 		row32 = (unsigned int*)row;
-		for(i=0; i<img->width; i++) {
-			struct color *rgb;
-			cur = i * smon.num_cpus / img->width;
-			col0 = cpucol[cur];
-			rgb = rgbcolors + col0;
 
-			*row32++ = (rgb->r << rshift) | (rgb->g << gshift) | (rgb->b << bshift);
+		if(sep_disp) {
+			for(i=0; i<smon.num_cpus; i++) {
+				struct color *rgb;
+				unsigned int pixel;
+				rgb = rgbcolors + cpucol[i];
+				pixel = (rgb->r << rshift) | (rgb->g << gshift) | (rgb->b << bshift);
+
+				for(j=0; j<colw; j++) {
+					row32[j] = pixel;
+				}
+				row32 += colw;
+			}
+		} else {
+			for(i=0; i<img->width; i++) {
+				struct color *rgb;
+				cur = i * smon.num_cpus / img->width;
+				col0 = cpucol[cur];
+				rgb = rgbcolors + col0;
+
+				*row32++ = (rgb->r << rshift) | (rgb->g << gshift) | (rgb->b << bshift);
+			}
 		}
 		break;
 
@@ -150,11 +191,9 @@ void cpumon_update(void)
 
 void cpumon_draw(void)
 {
+	unsigned int i, total_width, x, y, sx;
 	int baseline;
 	char buf[128];
-
-	draw_frame(view_rect.x - BEVEL, view_rect.y - BEVEL, view_rect.width + BEVEL * 2,
-			view_rect.height + BEVEL * 2, -BEVEL);
 
 	set_color(uicolor[COL_BG]);
 	draw_rect(lb_rect.x, lb_rect.y, lb_rect.width, lb_rect.height);
@@ -166,7 +205,24 @@ void cpumon_draw(void)
 
 	if(!img) return;
 
-	blit_image(img, view_rect.x, view_rect.y);
+	if(sep_disp) {
+		total_width = (smon.num_cpus - 1) * col_step + colw;
+		x = (rect.width - total_width) / 2;
+		y = view_rect.y - BEVEL;
+
+		sx = 0;
+		for(i=0; i<smon.num_cpus; i++) {
+			draw_frame(x, y, colw + BEVEL * 2, view_rect.height + BEVEL * 2, -BEVEL);
+			blit_subimage(img, x + BEVEL, view_rect.y, sx, 0, colw, img->height);
+			x += col_step;
+			sx += colw;
+		}
+
+	} else {
+		draw_frame(view_rect.x - BEVEL, view_rect.y - BEVEL, view_rect.width +
+				BEVEL * 2, view_rect.height + BEVEL * 2, -BEVEL);
+		blit_image(img, view_rect.x, view_rect.y);
+	}
 }
 
 static int resize_framebuf(unsigned int width, unsigned int height)

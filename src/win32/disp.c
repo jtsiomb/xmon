@@ -95,3 +95,8 @@ void free_image(struct image *img)
 void blit_image(struct image *img, int x, int y)
 {
 }
+
+void blit_subimage(struct image *img, int dx, int dy, int sx, int sy,
+		unsigned int width, unsigned int height)
+{
+}
