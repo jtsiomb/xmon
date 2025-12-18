@@ -11,7 +11,7 @@ inc = /I src
 
 CC = cl
 CFLAGS = /nologo $(opt) $(dbg) $(warn) $(inc)
-LDFLAGS = /nologo /MD /link /subsystem:windows user32.lib gdi32.lib
+LDFLAGS = /nologo /MD /link /subsystem:windows user32.lib gdi32.lib advapi32.lib
 
 $(bin): $(obj)
 	$(CC) /Fe$@ $(obj) $(LDFLAGS)
