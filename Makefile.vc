@@ -3,8 +3,9 @@ obj = src\main.obj src\widget.obj src\options.obj \
       src\win32\cpu.obj src\win32\mem.obj src\win32\load.obj \
       src\win32\net.obj src\win32\disp.obj
 bin = xmon.exe
+res = xmon.res
 
-#opt = /O2 /G5
+opt = /O2 /G5
 dbg = /Zi
 warn = /W3
 inc = /I src
@@ -13,8 +14,11 @@ CC = cl
 CFLAGS = /nologo $(opt) $(dbg) $(warn) $(inc)
 LDFLAGS = /nologo /MD /link /subsystem:windows user32.lib gdi32.lib advapi32.lib
 
-$(bin): $(obj)
-	$(CC) /Fe$@ $(obj) $(LDFLAGS)
+$(bin): $(obj) $(res)
+	$(CC) /Fe$@ $(obj) $(res) $(LDFLAGS)
+
+$(res): src\win32\xmon.rc
+	rc /fo$@ src\win32\xmon.rc
 
 .c.obj:
 	$(CC) /c /Fo$@ $< $(CFLAGS)
@@ -23,3 +27,4 @@ clean:
 	del src\*.obj
 	del src\win32\*.obj
 	del $(bin)
+	del $(res)
