@@ -42,6 +42,7 @@ int main(int argc, char **argv)
 {
 	int i;
 	long prev_upd, msec, dt, delay;
+	char *env;
 
 	init_opt();
 	read_config();
@@ -79,6 +80,13 @@ int main(int argc, char **argv)
 	if((opt.mon & MON_NET) && net_init() == -1) {
 		fprintf(stderr, "disabling network traffic display\n");
 		opt.mon &= ~MON_NET;
+	}
+
+	if((env = getenv("XMON_DBG_NCPU"))) {
+		int n = atoi(env);
+		if(n > 0 && n < smon.num_cpus) {
+			smon.num_cpus = n;
+		}
 	}
 
 	if(init_disp() == -1) {
