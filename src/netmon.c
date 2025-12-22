@@ -166,8 +166,19 @@ void netmon_draw(void)
 	do {
 		bar_x--;
 		idx = idx > 0 ? idx - 1 : plot_width - 1;
-		rval = plot[idx].rx * plot_height / plot_max;
-		tval = plot[idx].tx * plot_height / plot_max;
+		/*rval = plot[idx].rx * plot_height / plot_max;
+		tval = plot[idx].tx * plot_height / plot_max;*/
+
+		rval = (plot[idx].rx << 7) / plot_max;
+		if(rval > 127) rval = 127;
+		rval = (plotlut[rval] * plot_height) >> 7;
+		if(!rval && plot[idx].rx) rval = 1;
+
+		tval = (plot[idx].tx << 7) / plot_max;
+		if(tval > 127) tval = 127;
+		tval = (plotlut[tval] * plot_height) >> 7;
+		if(!tval && plot[idx].tx) tval = 1;
+
 		bval = rval < tval ? rval : tval;
 
 		if(bval > 0) {

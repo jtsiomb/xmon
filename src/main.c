@@ -25,6 +25,7 @@ static long tm0;
 struct sysmon smon;
 unsigned int ui_active_widgets;
 unsigned int cpulut[LUT_SIZE];
+unsigned int plotlut[LUT_SIZE];
 
 static int frm_width;	/* total with bevels */
 static int bevel;
@@ -60,6 +61,7 @@ int main(int argc, char **argv)
 		unsigned int val = lut[i];
 #endif
 		cpulut[i] = (unsigned int)((val * opt.cpu.ncolors) >> 8);
+		plotlut[i] = val >> 1;
 	}
 
 	if((opt.mon & MON_CPU) && cpu_init() == -1) {
