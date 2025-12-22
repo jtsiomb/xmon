@@ -135,22 +135,23 @@ void cpu_update(void)
 	if(NtQuerySystemInformation) {
 		int status;
 		unsigned long retsz;
-		unsigned long idle, sum, allidle, allsum;
+		unsigned long idle, work, sum, allidle, allsum;
 
 		status = NtQuerySystemInformation(SYS_PROC_PERF_INFO, sppinfo, sppinfo_size, &retsz);
 
 		allidle = allsum = 0;
 		for(i=0; i<smon.num_cpus; i++) {
 			idle = (unsigned long)(sppinfo[i].idle.QuadPart - prev[i].idle.QuadPart);
-			sum = (unsigned long)((sppinfo[i].user.QuadPart - prev[i].user.QuadPart) +
+			work = (unsigned long)((sppinfo[i].user.QuadPart - prev[i].user.QuadPart) +
 					(sppinfo[i].kernel.QuadPart - prev[i].kernel.QuadPart));
-			smon.cpu[i] = ((sum - idle) << 7) / sum;
+			sum = /*idle + */work;
+			smon.cpu[i] = 128 - (idle << 7) / sum;
 			prev[i] = sppinfo[i];
 
 			allidle += idle;
 			allsum += sum;
 		}
 
-		smon.single = ((allsum - allidle) << 7) / allsum;
+		smon.single = 128 - (allidle << 7) / allsum;
 	}
 }
