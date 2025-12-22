@@ -27,7 +27,7 @@ jobs:
       run: |
         C:\msys64\usr\bin\wget.exe -q http://mutantstargoat.com/~nuclear/msvc6.zip
         7z x msvc6.zip
-        C:\msys64\usr\bin\wget.exe -q http://mutantstargoat.com/~nuclear/vc6fullvarsgh.bat
+        C:\msys64\usr\bin\wget.exe -q http://mutantstargoat.com/~nuclear/vc6varsgh.bat
         C:\msys64\usr\bin\wget.exe -q http://nuclear.mutantstargoat.com/sw/xmon/img/icon.ico
 
     - name: build xmon
