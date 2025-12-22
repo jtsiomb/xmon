@@ -33,7 +33,7 @@ jobs:
     - name: build xmon
       shell: cmd
       run: |
-        call vc6fullvarsgh.bat
+        call vc6varsgh.bat
         nmake -f Makefile.vc
 
     - uses: actions/upload-artifact@v4
