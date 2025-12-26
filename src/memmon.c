@@ -26,7 +26,7 @@ int memmon_height(int w)
 void memmon_draw(void)
 {
 	char buf[128], *ptr;
-	long used, ratio;
+	unsigned int used, ratio_used, ratio_total;
 	int baseline, y;
 
 	if(smon.mem_total <= 0) return;
@@ -35,12 +35,18 @@ void memmon_draw(void)
 	draw_rect(rect.x, rect.y, rect.width, font.height * 2);
 
 	used = smon.mem_total - smon.mem_free;
-	ratio = used * 100 / smon.mem_total;
+	if(used & 0xfff00000) {
+		ratio_used = used >> 12;
+		ratio_total = smon.mem_total >> 12;
+	} else {
+		ratio_used = used;
+		ratio_total = smon.mem_total;
+	}
 	baseline = rect.y + font.height - font.descent - 1;
 
 	set_color(uicolor[COL_FG]);
 
-	sprintf(buf, "MEM %3ld%%", ratio);
+	sprintf(buf, "MEM %3u%%", ratio_used * 100 / ratio_total);
 	draw_text(rect.x, baseline, buf);
 	baseline += font.height;
 
@@ -51,7 +57,7 @@ void memmon_draw(void)
 	draw_text(rect.x, baseline, buf);
 
 	y = baseline + font.descent + 1 + BEVEL;
-	draw_bar(rect.x, y, rect.width, used, smon.mem_total);
+	draw_bar(rect.x, y, rect.width, ratio_used, ratio_total);
 }
 
 int memfmt(char *buf, unsigned long mem, int baseunit)
