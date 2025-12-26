@@ -4,7 +4,7 @@
 #include "xmon.h"
 #include "options.h"
 
-#ifdef BUILD_WIN32
+#if defined(BUILD_WIN32) || defined(__FreeBSD__)
 #include <malloc.h>
 #else
 #include <alloca.h>

@@ -7,9 +7,10 @@ enum {
 	MON_CPU		= 0x0001,
 	MON_MEM		= 0x0002,
 	MON_LOAD	= 0x0004,
-	MON_NET		= 0x0008
+	MON_NET		= 0x0008,
+
+	MON_ALL		= MON_CPU | MON_MEM | MON_LOAD | MON_NET
 };
-#define MON_ALL	0xffff
 
 struct vis_options {
 	struct color uicolor[NUM_UICOLORS];

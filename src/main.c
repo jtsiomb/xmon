@@ -82,6 +82,11 @@ int main(int argc, char **argv)
 		opt.mon &= ~MON_NET;
 	}
 
+	if(!opt.mon) {
+		fprintf(stderr, "no monitoring widgets are enabled\n");
+		return 1;
+	}
+
 	if((env = getenv("XMON_DBG_NCPU"))) {
 		int n = atoi(env);
 		if(n > 0 && n < smon.num_cpus) {
