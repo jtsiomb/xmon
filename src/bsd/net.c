@@ -64,6 +64,8 @@ next:	ifa = ifa->ifa_next;
 
 	smon.net_rx = prev_rx ? rx - prev_rx : 0;
 	smon.net_tx = prev_tx ? tx - prev_tx : 0;
+	prev_rx = rx;
+	prev_tx = tx;
 
 	freeifaddrs(iflist);
 }
