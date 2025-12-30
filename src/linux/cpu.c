@@ -116,6 +116,7 @@ void cpu_update(void)
 static int calc_usage(unsigned long *cval, unsigned long *pval)
 {
 	unsigned long delta[MAX_FIELDS], sum = 0;
+	unsigned long idle;
 	int i;
 
 	for(i=0; i<MAX_FIELDS; i++) {
@@ -123,7 +124,8 @@ static int calc_usage(unsigned long *cval, unsigned long *pval)
 		sum += delta[i];
 	}
 
-	return sum ? 128 - (delta[IDLE] << 7) / sum : 0;
+	idle = delta[IDLE] + delta[IOWAIT];
+	return sum ? 128 - (idle << 7) / sum : 0;
 }
 
 static int parse_cpustat(int cur)
