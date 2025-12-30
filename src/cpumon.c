@@ -271,7 +271,7 @@ void cpumon_draw(void)
 	}
 	draw_text(lb_rect.x, baseline, buf);
 
-	if(!img) return;
+	if(!img || !colw) return;
 
 	if(sep_disp) {
 		total_width = (smon.num_cpus - 1) * col_step + colw + 2 * BEVEL;
