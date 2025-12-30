@@ -274,8 +274,8 @@ void cpumon_draw(void)
 	if(!img) return;
 
 	if(sep_disp) {
-		total_width = (smon.num_cpus - 1) * col_step + colw;
-		x = (rect.width - total_width) / 2;
+		total_width = (smon.num_cpus - 1) * col_step + colw + 2 * BEVEL;
+		x = view_rect.x - BEVEL + (rect.width - total_width) / 2;
 		y = view_rect.y - BEVEL;
 
 		sx = 0;
