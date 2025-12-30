@@ -77,6 +77,13 @@ Then just run `make` to compile, and `make install` to install.
 
 ### Windows
 
+The windows build includes an icon, which is not in the git repository. If
+you're building from a release archive you should have it (`icon.ico` in the
+project root), and need no further steps. If you're building the git version
+you need to get the icon first, and put it in the project root directory. Either
+grab it from the last available release archive, or from:
+http://nuclear.mutantstargoat.com/sw/xmon/img/icon.ico
+
 #### MS Visual C
 
 To build with the microsoft compiler, from a console with the msvc build
