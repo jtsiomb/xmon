@@ -56,8 +56,6 @@ static int have_xshm;
 static Atom xa_wm_proto, xa_wm_del;
 static Atom xa_mwm_hints;
 
-static long prev_upd;
-
 
 static int create_window(void);
 static void proc_event(XEvent *ev);
@@ -101,8 +99,6 @@ int init_disp(void)
 	font.descent = xfont->descent;
 
 	XSetFont(dpy, gc, xfont->fid);
-
-	prev_upd = -opt.upd_interv;
 	return 0;
 }
 
