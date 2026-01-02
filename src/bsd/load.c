@@ -21,7 +21,7 @@ int load_init(void)
 		la.fscale >>= 1;
 		shift++;
 	}
-	shift -= 10;	/* we store load in 12.10 fixed point */
+	shift = 10 - shift;	/* we store load in 12.10 fixed point */
 
 	return 0;
 }
