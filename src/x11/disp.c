@@ -417,8 +417,11 @@ static void proc_event(XEvent *ev)
 	case KeyPress:
 		if((sym = XLookupKeysym(&ev->xkey, 0)) != NoSymbol) {
 			switch(sym) {
-			case XK_Escape:
-				quit = 1;
+			case XK_q:
+			case XK_Q:
+				if(ev->xkey.state & ControlMask) {
+					quit = 1;
+				}
 				break;
 
 			default:

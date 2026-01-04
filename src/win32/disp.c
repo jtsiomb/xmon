@@ -484,7 +484,7 @@ static LRESULT CALLBACK handle_event(HWND win, unsigned int msg, WPARAM wparam, 
 		return TRUE;	/* we've set our own logical palette */
 
 	case WM_KEYDOWN:
-		if(wparam == VK_ESCAPE) {
+		if(wparam == 'Q' && GetKeyState(VK_CONTROL)) {
 			quit = 1;
 		}
 		break;
