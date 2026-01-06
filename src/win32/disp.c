@@ -95,7 +95,7 @@ int init_disp(void)
 	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	wc.lpfnWndProc = handle_event;
 	wc.hInstance = hinst;
-	wc.hIcon = LoadIcon(0, IDI_APPLICATION);
+	wc.hIcon = LoadIcon(hinst, MAKEINTRESOURCE(101));	/* 101 is the icon, see xmon.rc */
 	wc.hCursor = LoadCursor(0, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
 
