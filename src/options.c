@@ -92,7 +92,7 @@ static const char *usage_str[] = {
 	"Usage: %s [options]\n",
 	"Options:\n",
 	" -s/-size <width>x<height>: specify window size\n",
-	" -pos <X>x<Y>: specify window position\n",
+	" -pos <X>,<Y>: specify window position\n",
 	" -update <interval>: update interval in milliseconds\n",
 	" -cpu/-nocpu: enable/disable CPU usage display\n",
 	" -load/-noload: enable/disable load average display\n",
@@ -410,25 +410,18 @@ static int read_config_file(const char *fname, FILE *fp)
 
 static int parse_color(const char *str, struct color *col)
 {
-	unsigned int packed, r, g, b;
+	unsigned int packed;
 
 	if(!str) return -1;
 
-	if(sscanf(str, "%u,%u,%u", &r, &g, &b) == 3) {
-		col->r = r | (r << 8);
-		col->g = g | (g << 8);
-		col->b = b | (b << 8);
+	if(sscanf(str, "%d,%d,%d", &col->r, &col->g, &col->b) == 3) {
 		return 0;
 	}
 
 	if(sscanf(str, "%x", &packed) == 1) {
-		r = (packed >> 16) & 0xff;
-		g = (packed >> 8) & 0xff;
-		b = packed & 0xff;
-
-		col->r = r | (r << 8);
-		col->g = g | (g << 8);
-		col->b = b | (b << 8);
+		col->r = (packed >> 16) & 0xff;
+		col->g = (packed >> 8) & 0xff;
+		col->b = packed & 0xff;
 		return 0;
 	}
 
