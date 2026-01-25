@@ -392,6 +392,11 @@ static int create_window(void)
 	return 0;
 }
 
+static Bool match_evmotion(Display *dpy, XEvent *ev, XPointer arg)
+{
+	return ev->type == MotionNotify;
+}
+
 static void proc_event(XEvent *ev)
 {
 	static int prev_x, prev_y;
@@ -447,10 +452,15 @@ static void proc_event(XEvent *ev)
 
 	case MotionNotify:
 		if(ev->xmotion.state & Button1MotionMask) {
-			int dx = ev->xmotion.x_root - prev_x;
-			int dy = ev->xmotion.y_root - prev_y;
-			prev_x = ev->xmotion.x_root;
-			prev_y = ev->xmotion.y_root;
+			int dx = 0, dy = 0;
+
+			do {
+				dx += ev->xmotion.x_root - prev_x;
+				dy += ev->xmotion.y_root - prev_y;
+				prev_x = ev->xmotion.x_root;
+				prev_y = ev->xmotion.y_root;
+			} while(XCheckIfEvent(dpy, ev, match_evmotion, 0));
+
 			win_x += dx;
 			win_y += dy;
 			XMoveWindow(dpy, win, win_x, win_y);
