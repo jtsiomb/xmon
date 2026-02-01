@@ -114,7 +114,7 @@ int init_disp(void)
 	x = opt.x == -1 ? CW_USEDEFAULT : opt.x;
 	y = opt.y == -1 ? CW_USEDEFAULT : opt.y;
 
-	if(!(win = CreateWindow("xmon", "xmon", wstyle, opt.x, opt.y, opt.xsz,
+	if(!(win = CreateWindow("xmon", "xmon", wstyle, x, y, opt.xsz,
 					opt.ysz, 0, 0, hinst, 0))) {
 		MessageBox(0, "failed to create window", "Fatal", MB_OK);
 		return -1;
