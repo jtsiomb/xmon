@@ -82,6 +82,7 @@ int WINAPI WinMain(HINSTANCE _hinst, HINSTANCE prev, char *cmdline, int cmdshow)
 
 int init_disp(void)
 {
+	int x, y;
 	WNDCLASSEX wc = {0};
 	TEXTMETRIC tm;
 	RECT rect;
@@ -109,6 +110,9 @@ int init_disp(void)
 	} else {
 		wstyle = WS_POPUP;
 	}
+
+	x = opt.x == -1 ? CW_USEDEFAULT : opt.x;
+	y = opt.y == -1 ? CW_USEDEFAULT : opt.y;
 
 	if(!(win = CreateWindow("xmon", "xmon", wstyle, opt.x, opt.y, opt.xsz,
 					opt.ysz, 0, 0, hinst, 0))) {
@@ -170,6 +174,13 @@ int proc_events(long delay)
 	}
 	return 0;
 }
+
+void move_window(int x, int y)
+{
+	SetWindowPos(win, 0, x, y, 0, 0, SWP_NOSIZE | SWP_NOOWNERZORDER |
+			SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
 
 void resize_window(int x, int y)
 {

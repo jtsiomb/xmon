@@ -44,7 +44,7 @@ void init_opt(void)
 	struct passwd *pw;
 #endif
 
-	opt.x = opt.y = 0;
+	opt.x = opt.y = -1;
 	opt.xsz = 110;
 	opt.ysz = 200;
 	opt.upd_interv = 250;

@@ -139,6 +139,11 @@ int proc_events(long delay)
 	return 0;
 }
 
+void move_window(int x, int y)
+{
+	XMoveWindow(dpy, win, x, y);
+}
+
 void resize_window(int x, int y)
 {
 	XResizeWindow(dpy, win, x, y);
@@ -343,6 +348,7 @@ void blit_subimage(struct image *img, int dx, int dy, int sx, int sy,
 
 static int create_window(void)
 {
+	int x, y;
 	XSetWindowAttributes xattr;
 	XTextProperty txprop;
 	XWindowAttributes winattr;
@@ -354,7 +360,10 @@ static int create_window(void)
 	xattr.background_pixel = BlackPixel(dpy, scr);
 	xattr.colormap = cmap = DefaultColormap(dpy, scr);
 
-	if(!(win = XCreateWindow(dpy, root, opt.x, opt.y, opt.xsz, opt.ysz, 0,
+	x = opt.x == -1 ? 0 : opt.x;
+	y = opt.y == -1 ? 0 : opt.y;
+
+	if(!(win = XCreateWindow(dpy, root, x, y, opt.xsz, opt.ysz, 0,
 					CopyFromParent, InputOutput, CopyFromParent,
 					CWBackPixel | CWColormap, &xattr))) {
 		fprintf(stderr, "failed to create window\n");

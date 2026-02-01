@@ -123,6 +123,10 @@ int main(int argc, char **argv)
 	resize_window(minrect.width, minrect.height);
 	map_window();
 
+	if(opt.x != -1 && opt.y != -1) {
+		move_window(opt.x, opt.y);
+	}
+
 	prev_upd = -opt.upd_interv;
 #ifdef BUILD_UNIX
 	gettimeofday(&tv0, 0);

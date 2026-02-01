@@ -43,6 +43,7 @@ void shutdown_disp(void);
 
 int proc_events(long delay);
 
+void move_window(int x, int y);
 void resize_window(int x, int y);
 void map_window(void);
 
