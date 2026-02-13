@@ -303,6 +303,8 @@ void rbutton(int press, int x, int y)
 {
 	if(cpumon_info_state || hittest(x, y, &cpu_rect)) {
 		cpumon_info_state = cpumon_info(press, x, y);
+	} else if(press && hittest(x, y, &net_rect)) {
+		netmon_rclick(x, y);
 	}
 }
 

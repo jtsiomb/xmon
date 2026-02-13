@@ -68,6 +68,7 @@ void memmon_move(int x, int y);
 void memmon_resize(int x, int y);
 int memmon_height(int w);
 void memmon_draw(void);
+void netmon_rclick(int x, int y);
 
 int loadmon_init(void);
 void loadmon_move(int x, int y);

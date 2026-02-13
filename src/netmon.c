@@ -213,3 +213,9 @@ void netmon_draw(void)
 		draw_rects(tx_bars, tbar - tx_bars);
 	}
 }
+
+void netmon_rclick(int x, int y)
+{
+	plot_max = 1;
+	redisplay(UI_NET);
+}
