@@ -36,7 +36,7 @@ plot instead of a heatmap, because it also conveys utilization over time.
 
 License
 -------
-Copyright (C) 2025 John Tsiombikas <nuclear@mutantstargoat.com>
+Copyright (C) 2025-2026 John Tsiombikas <nuclear@mutantstargoat.com>
 
 Xmon is Free Software. Feel free to use, modify, and/or redistribute under the
 terms of the GNU General Public License v3, or at your option any later version
