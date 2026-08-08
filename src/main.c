@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 		dt = msec - prev_upd;
 		delay = opt.upd_interv - dt;
 
-		if(dirty) {
+		if(dirty && win_visible) {
 			delay = 0;
 		}
 
