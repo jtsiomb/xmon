@@ -49,7 +49,7 @@ static int bevel;
 static unsigned int dirty;
 
 static struct rect minrect;
-static struct rect cpu_rect, mem_rect, load_rect, net_rect;
+static struct rect cpu_rect, mem_rect, load_rect, net_rect, bat_rect;
 
 
 long get_msec(void);
@@ -98,6 +98,10 @@ int main(int argc, char **argv)
 		fprintf(stderr, "disabling network traffic display\n");
 		opt.mon &= ~MON_NET;
 	}
+	if((opt.mon & MON_BAT) && bat_init() == -1) {
+		fprintf(stderr, "disabling battery display\n");
+		opt.mon &= ~MON_BAT;
+	}
 
 	if(!opt.mon) {
 		fprintf(stderr, "no monitoring widgets are enabled\n");
@@ -127,12 +131,16 @@ int main(int argc, char **argv)
 	if((opt.mon & MON_NET) && netmon_init() == -1) {
 		return 1;
 	}
+	if((opt.mon & MON_BAT) && batmon_init() == -1) {
+		return 1;
+	}
 
 	/* compute bitmask to redraw all enabled widgets */
 	if(opt.mon & MON_CPU) ui_active_widgets |= UI_CPU;
 	if(opt.mon & MON_MEM) ui_active_widgets |= UI_MEM;
 	if(opt.mon & MON_LOAD) ui_active_widgets |= UI_LOAD;
 	if(opt.mon & MON_NET) ui_active_widgets |= UI_NET;
+	if(opt.mon & MON_BAT) ui_active_widgets |= UI_BAT;
 
 	set_background(uicolor[COL_BG]);
 
@@ -180,6 +188,9 @@ int main(int argc, char **argv)
 			}
 			if(opt.mon & MON_NET) {
 				net_update();
+			}
+			if(opt.mon & MON_BAT) {
+				bat_update();
 			}
 			dirty |= ui_active_widgets;
 		}
@@ -258,6 +269,18 @@ void layout(void)
 		y += net_rect.height + SEPSZ;
 	}
 
+	if(opt.mon & MON_BAT) {
+		bat_rect.x = ALL_X;
+		bat_rect.y = y;
+		bat_rect.width = ALL_WIDTH;
+		bat_rect.height = batmon_height(ALL_WIDTH);
+
+		batmon_move(bat_rect.x, bat_rect.y);
+		batmon_resize(bat_rect.width, bat_rect.height);
+
+		y += bat_rect.height + SEPSZ;
+	}
+
 	minrect.width = win_width;
 	minrect.height = y - SEPSZ + frm_width;
 
@@ -297,6 +320,11 @@ void draw_window(unsigned int dirty_override)
 	if(dirty & UI_NET) {
 		if(n++) DRAWSEP(net_rect.y);
 		netmon_draw();
+	}
+
+	if(dirty & UI_BAT) {
+		if(n++) DRAWSEP(bat_rect.y);
+		batmon_draw();
 	}
 
 	dirty = 0;

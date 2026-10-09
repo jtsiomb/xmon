@@ -25,8 +25,9 @@ enum {
 	MON_MEM		= 0x0002,
 	MON_LOAD	= 0x0004,
 	MON_NET		= 0x0008,
+	MON_BAT		= 0x0010,
 
-	MON_ALL		= MON_CPU | MON_MEM | MON_LOAD | MON_NET
+	MON_ALL		= MON_CPU | MON_MEM | MON_LOAD | MON_NET | MON_BAT
 };
 
 struct vis_options {

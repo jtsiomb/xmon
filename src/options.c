@@ -41,7 +41,7 @@ static struct color def_uicolor[NUM_UICOLORS] = {
 };
 
 /* these must match the order of the MON_* enums in options.h */
-static const char *monstr[] = {"cpu", "mem", "load", "net", 0};
+static const char *monstr[] = {"cpu", "mem", "load", "net", "bat", 0};
 
 #ifdef BUILD_UNIX
 static const char *cfgpath[] = {"~/.config/xmon.conf", "~/.xmon.conf", "/etc/xmon.conf", 0};
@@ -114,6 +114,8 @@ static const char *usage_str[] = {
 	" -cpu/-nocpu: enable/disable CPU usage display\n",
 	" -load/-noload: enable/disable load average display\n",
 	" -mem/-nomem: enable/disable memory usage display\n",
+	" -net/-nonet: enable/disable network traffic display\n",
+	" -bat/-nobat: enable/disable battery status display\n",
 	" -font <font>: specify UI font\n",
 	" -frame <pixels>: UI frame width in pixels (not including bevels)\n",
 	" -decor/-nodecor: enable/disable window decorations (frame, titlebar)\n",

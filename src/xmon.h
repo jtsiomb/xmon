@@ -36,9 +36,13 @@ enum {
 	UI_MEM		= 0x0004,
 	UI_LOAD		= 0x0008,
 	UI_NET		= 0x0010,
+	UI_BAT		= 0x0020,
 
 	UI_ALL		= 0x7fff
 };
+
+/* battery state */
+enum { BAT_FULL, BAT_CHG, BAT_DIS };
 
 struct sysmon {
 	/* CPU usage range [0, 127] */
@@ -50,6 +54,8 @@ struct sysmon {
 
 	unsigned long mem_total, mem_free;	/* in kb */
 	unsigned long net_rx, net_tx;		/* in bytes */
+
+	unsigned int bat, bat_time, bat_state;
 };
 
 extern struct sysmon smon;
@@ -67,11 +73,13 @@ void cpu_shutdown(void);
 int mem_init(void);
 int load_init(void);
 int net_init(void);
+int bat_init(void);
 
 void cpu_update(void);
 void mem_update(void);
 void load_update(void);
 void net_update(void);
+void bat_update(void);
 
 int cpumon_init(void);
 void cpumon_destroy(void);
@@ -99,6 +107,12 @@ void netmon_move(int x, int y);
 void netmon_resize(int x, int y);
 int netmon_height(int w);
 void netmon_draw(void);
+
+int batmon_init(void);
+void batmon_move(int x, int y);
+void batmon_resize(int x, int y);
+int batmon_height(int w);
+void batmon_draw(void);
 
 /* defined in main.c */
 void redisplay(unsigned int mask);
