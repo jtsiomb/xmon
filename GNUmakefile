@@ -46,6 +46,7 @@ cleandep:
 .PHONY: install
 install: $(bin)
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	rm -f $(DESTDIR)$(PREFIX)/bin/$(bin)
 	cp $(bin) $(DESTDIR)$(PREFIX)/bin/$(bin)
 
 .PHONY: uninstall

@@ -57,12 +57,15 @@ int mem_init(void)
 
 void mem_update(void)
 {
-	unsigned int mfree;
+	unsigned int mfree, mcache;
 	size_t len;
 
 	len = sizeof mfree;
 	if(sysctlbyname("vm.stats.vm.v_free_count", &mfree, &len, 0, 0) == -1) {
 		return;
+	}
+	if(sysctlbyname("vm.stats.vm.v_cache_count", &mcache, &len, 0, 0) != -1) {
+		mfree += mcache;
 	}
 	smon.mem_free = mfree << shift;
 }
